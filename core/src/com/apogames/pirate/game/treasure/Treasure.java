@@ -1,0 +1,1015 @@
+package com.apogames.pirate.game.treasure;
+
+import com.apogames.pirate.Constants;
+import com.apogames.pirate.asset.AssetLoader;
+import com.apogames.pirate.backend.DrawString;
+import com.apogames.pirate.backend.SequentiallyThinkingScreenModel;
+import com.apogames.pirate.entity.ApoButton;
+import com.apogames.pirate.game.MainPanel;
+import com.apogames.pirate.game.treasure.ai.Hard;
+import com.apogames.pirate.game.treasure.ai.Information;
+import com.apogames.pirate.game.treasure.ai.PiratePlayer;
+import com.apogames.pirate.game.treasure.ai.Result;
+import com.apogames.pirate.game.treasure.create.LevelCreate;
+import com.apogames.pirate.game.treasure.create.RuleCreate;
+import com.apogames.pirate.game.treasure.enums.Status;
+import com.apogames.pirate.game.treasure.help.*;
+import com.badlogic.gdx.Input;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
+import com.badlogic.gdx.math.GridPoint2;
+import com.badlogic.gdx.math.Vector2;
+
+import java.util.ArrayList;
+
+public class Treasure extends SequentiallyThinkingScreenModel {
+
+    private final int STATISTIC_RUNS = 0;
+
+    private int curTileSize = 1;
+
+    public static final String FUNCTION_BACK = "treasure_X";
+    public static final String FUNCTION_HELP = "HELP";
+    public static final String FUNCTION_TREASURE = "TREASURE";
+    public static final String FUNCTION_RULES = "RULES";
+
+    public static final String FUNCTION_YES = "yes";
+    public static final String FUNCTION_NO = "no";
+
+    public static final String FUNCTION_PLAYER_ONE = "one";
+    public static final String FUNCTION_PLAYER_TWO = "two";
+    public static final String FUNCTION_PLAYER_THREE = "three";
+    public static final String FUNCTION_PLAYER_FOUR = "four";
+    public static final String FUNCTION_PLAYER_FIVE = "five";
+
+    public static final String FUNCTION_PLAYER_ONE_HUD = "hud_one";
+    public static final String FUNCTION_PLAYER_TWO_HUD = "hud_two";
+    public static final String FUNCTION_PLAYER_THREE_HUD = "hud_three";
+    public static final String FUNCTION_PLAYER_FOUR_HUD = "hud_four";
+    public static final String FUNCTION_PLAYER_FIVE_HUD = "hud_five";
+
+    public static final String FUNCTION_RULES_LEFT = "rules_left";
+    public static final String FUNCTION_RULES_RIGHT = "rules_right";
+    public static final String FUNCTION_PLAY_AGAIN = "play_again";
+
+    private final boolean[] keys = new boolean[256];
+
+    private final Statistics statistics = new Statistics(STATISTIC_RUNS);
+
+    private final PiratePlayer humanPlayerSupport = new Hard();
+
+    private int playerCount = 3;
+
+	private int difficulty = 0;
+    private int size = 0;
+
+    private Tile[][] level;
+
+    private Rule[] rules;
+
+    private int currentPlayer = 0;
+
+    private int changeX = -100;
+    private int changeY = 0;
+
+    private int oldMouseX = 0;
+    private int oldMouseY = 0;
+
+    private boolean isPressed = false;
+    private boolean showHelp = false;
+    private boolean showSolution = false;
+
+    private int countRules = 0;
+
+    private Status currentStatus;
+    private Status oldStatus;
+
+    private int curOverLevelX = -1;
+    private int curOverLevelY = -1;
+    private int curPickLevelX = -1;
+    private int curPickLevelY = -1;
+
+    private PiratePlayer[] players;
+
+    private final ShowTimeInformation information = new ShowTimeInformation();
+    private final ShowMoreInformation moreInformation = new ShowMoreInformation();
+    private final ShowRules showRules = new ShowRules();
+    private final ScrollToTile scrollToTile = new ScrollToTile(this);
+
+    private String curTask;
+
+    private boolean showWon = true;
+    private Result lastResult;
+
+    private Rule[] allPossibleRules = null;
+
+    private boolean showBackQuestion = false;
+
+    public Treasure(final MainPanel game) {
+        super(game);
+    }
+
+	public void setSettings(ArrayList<PiratePlayer> players, int difficulty, int size) {
+        int playerCount = 3;
+        for (int i = 3; i < players.size(); i++) {
+                if (players.get(i) != null) {
+                    playerCount += 1;
+                }
+        }
+		this.playerCount = playerCount;
+		this.difficulty = difficulty;
+        this.size = size;
+
+        this.newLevel();
+
+        countRules = 0;
+        this.newRules();
+
+        this.players = new PiratePlayer[playerCount];
+        for (int i = 0; i < playerCount; i++) {
+            this.players[i] = players.get(i);
+            this.players[i].init();
+        }
+        this.humanPlayerSupport.init();
+
+        showAskButtons(false);
+	}
+
+    private void newRules() {
+        boolean hard = this.difficulty > 0;
+        this.rules = new Rule[this.playerCount];
+        for (int i = 0; i < this.rules.length; i++) {
+            Rule randomRule = RuleCreate.createRandomRule(this.level, hard);
+            while (isInRules(randomRule, i)) {
+                randomRule = RuleCreate.createRandomRule(this.level, hard);
+            }
+            this.rules[i] = randomRule;
+        }
+
+        this.countRules += 1;
+        if (this.countRules > 1000) {
+            this.newLevel();
+        } else {
+            int count = 0;
+            for (int y = 0; y < level.length; y++) {
+                for (int x = 0; x < level[0].length; x++) {
+                    boolean correct = true;
+                    for (Rule rule : this.rules) {
+                        if (!rule.getSolution(this.level)[y][x]) {
+                            correct = false;
+                            break;
+                        }
+                    }
+                    if (correct) {
+                        count += 1;
+                    }
+                }
+            }
+            if (count != 1) {
+                newRules();
+            }
+        }
+
+        this.allPossibleRules = null;
+
+        this.setStatus(Status.SET_QUESTION);
+        for (Tile[] tiles : this.level) {
+            for (int x = 0; x < this.level[0].length; x++) {
+                if (tiles[x] != null) {
+                    tiles[x].resetGuessed();
+                }
+            }
+        }
+
+        if (this.players != null) {
+            for (PiratePlayer player : this.players) {
+                player.init();
+            }
+            this.humanPlayerSupport.init();
+        }
+
+        if (this.showRules.isVisible()) {
+            changeVisibilityForShowRules();
+        }
+        getMainPanel().getButtonByFunction(FUNCTION_PLAY_AGAIN).setVisible(false);
+        this.changeShowBackQuestion(false);
+    }
+
+    private boolean isInRules(Rule randomRule, int maxI) {
+        for (int i = 0; i < maxI; i++) {
+            boolean sameRule = true;
+            boolean[][] solutionRule = this.rules[i].getSolution(this.level);
+            boolean[][] solutionRandomRule = randomRule.getSolution(this.level);
+            for (int y = 0; y < this.level.length; y++) {
+                for (int x = 0; x < this.level[0].length; x++) {
+                    if (solutionRule[y][x] != solutionRandomRule[y][x]) {
+                        sameRule = false;
+                        break;
+                    }
+                }
+            }
+            if (sameRule) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void setNeededButtonsVisible() {
+    	getMainPanel().getButtonByFunction(FUNCTION_BACK).setVisible(true);
+        getMainPanel().getButtonByFunction(FUNCTION_HELP).setVisible(true);
+        getMainPanel().getButtonByFunction(FUNCTION_TREASURE).setVisible(true);
+        getMainPanel().getButtonByFunction(FUNCTION_RULES).setVisible(true);
+        getMainPanel().getButtonByFunction(FUNCTION_PLAY_AGAIN).setVisible(false);
+        showAskButtons(false);
+    }
+
+    public void showAskButtons(boolean visible) {
+        getMainPanel().getButtonByFunction(FUNCTION_PLAYER_ONE).setVisible(visible);
+        getMainPanel().getButtonByFunction(FUNCTION_PLAYER_ONE_HUD).setVisible(visible);
+        getMainPanel().getButtonByFunction(FUNCTION_PLAYER_TWO).setVisible(visible);
+        getMainPanel().getButtonByFunction(FUNCTION_PLAYER_TWO_HUD).setVisible(visible);
+        getMainPanel().getButtonByFunction(FUNCTION_PLAYER_THREE).setVisible(visible);
+        getMainPanel().getButtonByFunction(FUNCTION_PLAYER_THREE_HUD).setVisible(visible);
+        if (this.rules != null && this.rules.length > 3) {
+            getMainPanel().getButtonByFunction(FUNCTION_PLAYER_FOUR).setVisible(visible);
+            getMainPanel().getButtonByFunction(FUNCTION_PLAYER_FOUR_HUD).setVisible(visible);
+            if (this.rules.length > 4) {
+                getMainPanel().getButtonByFunction(FUNCTION_PLAYER_FIVE).setVisible(visible);
+                getMainPanel().getButtonByFunction(FUNCTION_PLAYER_FIVE_HUD).setVisible(visible);
+            }
+        }
+
+        switch (this.currentPlayer) {
+            case 0 : getMainPanel().getButtonByFunction(FUNCTION_PLAYER_ONE).setVisible(false); getMainPanel().getButtonByFunction(FUNCTION_PLAYER_ONE_HUD).setVisible(false); break;
+            case 1 : getMainPanel().getButtonByFunction(FUNCTION_PLAYER_TWO).setVisible(false); getMainPanel().getButtonByFunction(FUNCTION_PLAYER_TWO_HUD).setVisible(false); break;
+            case 2 : getMainPanel().getButtonByFunction(FUNCTION_PLAYER_THREE).setVisible(false); getMainPanel().getButtonByFunction(FUNCTION_PLAYER_THREE_HUD).setVisible(false); break;
+            case 3 : getMainPanel().getButtonByFunction(FUNCTION_PLAYER_FOUR).setVisible(false); getMainPanel().getButtonByFunction(FUNCTION_PLAYER_FOUR_HUD).setVisible(false); break;
+            case 4 : getMainPanel().getButtonByFunction(FUNCTION_PLAYER_FIVE).setVisible(false); getMainPanel().getButtonByFunction(FUNCTION_PLAYER_FIVE_HUD).setVisible(false); break;
+        }
+    }
+    
+    @Override
+    public void init() {
+        if (getGameProperties() == null) {
+        	setGameProperties(new TreasurePreferences(this));
+            loadProperties();
+        }
+        LevelCreate createLevel = new LevelCreate(this.size, this.difficulty > 0);
+        this.level = createLevel.getLevel();
+
+        this.getMainPanel().resetSize(Constants.GAME_WIDTH, Constants.GAME_HEIGHT);
+        
+        setMenuButtonVisible(false);
+
+        this.currentPlayer = 0;
+        this.setStatus(Status.SET_QUESTION);
+
+        this.changeX = -400;
+        this.changeY = 2;
+
+        this.setInformationForStatus();
+	}
+
+    public int getChangeX() {
+        return changeX;
+    }
+
+    public int getChangeY() {
+        return changeY;
+    }
+
+    public void setChangeX(int changeX) {
+        this.changeX = changeX;
+    }
+
+    public void setChangeY(int changeY) {
+        this.changeY = changeY;
+    }
+
+    public int getCurTileSize() {
+        return curTileSize;
+    }
+
+    @Override
+    public void keyPressed(int keyCode, char character) {
+        super.keyPressed(keyCode, character);
+
+        keys[keyCode] = true;
+    }
+
+    @Override
+    public void keyButtonReleased(int keyCode, char character) {
+        super.keyButtonReleased(keyCode, character);
+
+        keys[keyCode] = false;
+
+        if (keyCode == Input.Keys.T) {
+            this.newLevel();
+        }
+        if (keyCode == Input.Keys.R) {
+            this.countRules = 0;
+            this.newRules();
+            this.setInformationForStatus();
+        }
+        if (keyCode == Input.Keys.C) {
+            this.showSolution = !this.showSolution;
+        }
+        if (keyCode == Input.Keys.N) {
+            this.nextPlayer(1);
+        }
+    }
+
+    private void newLevel() {
+        LevelCreate createLevel = new LevelCreate(this.size, this.difficulty > 0);
+        this.level = createLevel.getLevel();
+        this.countRules = 0;
+        this.currentPlayer = 0;
+        this.newRules();
+        this.setInformationForStatus();
+    }
+
+    private void nextPlayer(int add) {
+        this.currentPlayer += add;
+        if (this.currentPlayer < 0) {
+            this.currentPlayer = this.rules.length - 1;
+        } else if (this.currentPlayer >= this.rules.length) {
+            this.currentPlayer = 0;
+        }
+        if (this.currentStatus != Status.WON) {
+            this.setStatus(Status.SET_QUESTION);
+            this.setInformationForStatus();
+            if (this.rules[this.currentPlayer].isOut()) {
+                this.nextPlayer(1);
+            }
+        }
+    }
+
+    public void mouseMoved(int mouseX, int mouseY) {
+        if (this.currentStatus != Status.ASK) {
+            Vector2 mousePosition = getMousePosition(mouseX, mouseY);
+            if (mousePosition != null) {
+                this.curOverLevelX = (int)(mousePosition.x);
+                this.curOverLevelY = (int)(mousePosition.y);
+            } else {
+                this.curOverLevelX = -1;
+                this.curOverLevelY = -1;
+            }
+        }
+    }
+
+    public void mouseButtonReleased(int mouseX, int mouseY, boolean isRightButton) {
+        this.isPressed = false;
+
+        if (this.currentStatus == Status.WON && !isRightButton) {
+            this.showWon = !this.showWon;
+            return;
+        }
+
+        if (this.showRules.isVisible()) {
+            changeVisibilityForShowRules();
+            return;
+        }
+
+        if (showBackQuestion) {
+            return;
+        }
+
+        if (this.currentStatus != Status.ASK && !isRightButton && this.players[this.currentPlayer].isHuman()) {
+            this.curPickLevelX = -1;
+            this.curPickLevelY = -1;
+
+            Vector2 mousePosition = getMousePosition(mouseX, mouseY);
+
+            if (mousePosition != null) {
+                this.curPickLevelX = (int)(mousePosition.x);
+                this.curPickLevelY = (int)(mousePosition.y);
+                if (this.currentStatus == Status.SET_QUESTION) {
+                    if (this.level[this.curPickLevelY][this.curPickLevelX] != null && !this.level[this.curPickLevelY][this.curPickLevelX].hasIncorrectGuess()) {
+                        this.setStatus(Status.ASK);
+                        if (this.players[this.currentPlayer].isHuman()) {
+                            Information information = new Information(this.currentPlayer, this.playerCount, getAllPossibleRules());
+                            Result result = this.humanPlayerSupport.placeGuess(level, this.rules[this.currentPlayer], information);
+                            System.out.println("Ich würde an Stelle " + result.getX() + " " + result.getY() + " und Spieler " + result.getAskPlayer() + " befragen.");
+                        }
+                        showAskButtons(true);
+                    } else if (this.level[this.curPickLevelY][this.curPickLevelX] != null && this.level[this.curPickLevelY][this.curPickLevelX].hasIncorrectGuess()) {
+                        this.setMoreInformationForError("Da kann der Schatz nicht liegen.");
+                    }
+                } else if (this.currentStatus == Status.SET_NOT) {
+                    if (this.level[this.curPickLevelY][this.curPickLevelX] != null &&
+                            !this.level[this.curPickLevelY][this.curPickLevelX].hasIncorrectGuess() &&
+                            !this.rules[this.currentPlayer].getSolution(this.level)[this.curPickLevelY][this.curPickLevelX]) {
+                        this.level[this.curPickLevelY][this.curPickLevelX].getIncorrectGuesses()[this.currentPlayer] = true;
+                        setMoreInformation(Status.ASK);
+                        this.nextPlayer(1);
+                    } else {
+                        this.setMoreInformationForError("Waehle ein Feld, wo der Schatz NICHT liegen kann.");
+                    }
+                } else if (this.currentStatus == Status.TREASURE) {
+                    checkForWin();
+                }
+            }
+        } else if (this.currentStatus == Status.ASK && mouseY > 120 && this.players[this.currentPlayer].isHuman()) {
+            this.setStatus(Status.SET_QUESTION);
+            this.showAskButtons(false);
+
+        }
+    }
+
+    private void changeVisibilityForShowRules() {
+        this.showRules.setVisible(!this.showRules.isVisible());
+        this.showRules.setLevel(this.level);
+        showButtonsForRules(!this.showRules.isVisible());
+    }
+
+    private void checkForWin(int x, int y) {
+        boolean win = true;
+        for (int i = 0; i < this.rules.length; i++) {
+            Rule rule = this.rules[i];
+            if (!rule.getSolution(this.level)[y][x]) {
+                this.level[y][x].getIncorrectGuesses()[i] = true;
+                win = false;
+            } else {
+                this.level[y][x].getCorrectGuesses()[i] = true;
+            }
+        }
+        if (win) {
+            getMainPanel().getButtonByFunction(FUNCTION_RULES).setVisible(false);
+            getMainPanel().getButtonByFunction(FUNCTION_TREASURE).setVisible(false);
+            getMainPanel().getButtonByFunction(FUNCTION_PLAY_AGAIN).setVisible(true);
+            this.setStatus(Status.WON);
+            showWon = true;
+        }
+    }
+
+    private Vector2 getMousePosition(int mouseX, int mouseY) {
+        for (int y = 0; y < this.level.length; y++) {
+            for (int x = 0; x < this.level[0].length; x++) {
+                if (this.level[y][x] != null) {
+                    int changeX = this.changeX + x * Constants.TILE_SIZE[this.curTileSize] + y * Constants.TILE_SIZE[this.curTileSize] / 2;
+                    int changeY = this.changeY + (int) (y * Constants.TILE_SIZE[this.curTileSize] * 295f / 256f * 0.75f);
+
+                    if (mouseX > changeX && mouseX < changeX + Constants.TILE_SIZE[this.curTileSize] &&
+                            mouseY > changeY && mouseY < changeY + Constants.TILE_SIZE[this.curTileSize] * 295f / 256f) {
+                        if (this.level[y][x].getPolygon(changeX, changeY, Constants.TILE_SIZE[this.curTileSize]).contains(mouseX, mouseY)) {
+                            return new Vector2(x, y);
+                        }
+
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    public void mousePressed(int x, int y, boolean isRightButton) {
+        if (isRightButton && !this.isPressed) {
+            this.isPressed = true;
+            this.oldMouseX = x;
+            this.oldMouseY = y;
+        }
+    }
+
+    public void mouseDragged(int x, int y, boolean isRightButton) {
+        if (isRightButton) {
+            if (!this.isPressed) {
+                this.mousePressed(x, y, isRightButton);
+            }
+            int changeX = x - this.oldMouseX;
+            int changeY = y - this.oldMouseY;
+
+            this.setChangeXAndY(changeX, changeY);
+            this.oldMouseX = x;
+            this.oldMouseY = y;
+        }
+    }
+
+    private void setChangeXAndY(int changeX, int changeY) {
+        if ((this.changeX + changeX < 130 || changeX < 0) &&
+                (this.changeX + changeX > (-this.level[0].length * Constants.TILE_SIZE[this.curTileSize] - this.level.length/2 * Constants.TILE_SIZE[this.curTileSize] + Constants.GAME_WIDTH) || changeX > 0)) {
+            this.changeX += changeX;
+        }
+        if ((this.changeY + changeY < 170 || changeY < 0) &&
+                ((this.changeY + changeY > -this.level.length * Constants.TILE_SIZE[this.curTileSize] * 295f/256f * 0.75f + 500) || changeY > 0)) {
+            this.changeY += changeY;
+        }
+    }
+
+    private void changeShowBackQuestion(boolean showBack) {
+        this.showBackQuestion = showBack;
+
+        getMainPanel().getButtonByFunction(FUNCTION_YES).setVisible(showBack);
+        getMainPanel().getButtonByFunction(FUNCTION_NO).setVisible(showBack);
+    }
+
+    @Override
+    public void mouseButtonFunction(String function) {
+        super.mouseButtonFunction(function);
+        if (showBackQuestion) {
+            switch (function) {
+                case Treasure.FUNCTION_YES:
+                    quit();
+                    break;
+                case Treasure.FUNCTION_NO:
+                    this.changeShowBackQuestion(false);
+                    break;
+            }
+            return;
+        }
+        switch (function) {
+            case Treasure.FUNCTION_BACK:
+                if (this.currentStatus == Status.WON) {
+                    quit();
+                } else {
+                    this.changeShowBackQuestion(true);
+                }
+                break;
+            case Treasure.FUNCTION_HELP:
+                this.showHelp = !this.showHelp;
+                break;
+            case Treasure.FUNCTION_PLAYER_ONE:
+            case Treasure.FUNCTION_PLAYER_ONE_HUD:
+                this.checkPlayerAndSet(0);
+                break;
+            case Treasure.FUNCTION_PLAYER_TWO:
+            case Treasure.FUNCTION_PLAYER_TWO_HUD:
+                this.checkPlayerAndSet(1);
+                break;
+            case Treasure.FUNCTION_PLAYER_THREE:
+            case Treasure.FUNCTION_PLAYER_THREE_HUD:
+                this.checkPlayerAndSet(2);
+                break;
+            case Treasure.FUNCTION_PLAYER_FOUR:
+            case Treasure.FUNCTION_PLAYER_FOUR_HUD:
+                this.checkPlayerAndSet(3);
+                break;
+            case Treasure.FUNCTION_PLAYER_FIVE:
+            case Treasure.FUNCTION_PLAYER_FIVE_HUD:
+                this.checkPlayerAndSet(4);
+                break;
+            case Treasure.FUNCTION_TREASURE:
+                showAskButtons(false);
+                if (this.currentStatus != Status.TREASURE) {
+                    this.oldStatus = this.currentStatus;
+                    this.setStatus(Status.TREASURE);
+                } else {
+                    this.setStatus(oldStatus);
+                }
+                setInformationForStatus();
+                break;
+            case Treasure.FUNCTION_RULES:
+                changeVisibilityForShowRules();
+                break;
+            case Treasure.FUNCTION_RULES_LEFT:
+                this.showRules.nextShow(-1);
+                break;
+            case Treasure.FUNCTION_RULES_RIGHT:
+                this.showRules.nextShow(1);
+                break;
+            case Treasure.FUNCTION_PLAY_AGAIN:
+                this.newLevel();
+                break;
+        }
+    }
+
+    private void showButtonsForRules(boolean visible) {
+        getMainPanel().getButtonByFunction(FUNCTION_HELP).setVisible(visible);
+        getMainPanel().getButtonByFunction(FUNCTION_TREASURE).setVisible(visible);
+        getMainPanel().getButtonByFunction(FUNCTION_BACK).setVisible(visible);
+        getMainPanel().getButtonByFunction(FUNCTION_RULES_LEFT).setVisible(!visible);
+        getMainPanel().getButtonByFunction(FUNCTION_RULES_RIGHT).setVisible(!visible);
+    }
+
+    private void checkPlayerAndSet(int player) {
+        this.showAskButtons(false);
+        this.setStatus(Status.SET_QUESTION);
+        if (!this.rules[player].getSolution(this.level)[this.curPickLevelY][this.curPickLevelX]) {
+            this.setStatus(Status.SET_NOT);
+            getMainPanel().getButtonByFunction(FUNCTION_TREASURE).setVisible(false);
+            this.level[this.curPickLevelY][this.curPickLevelX].getIncorrectGuesses()[player] = true;
+            this.setInformationForStatus();
+            this.setMoreInformation(Status.SET_NOT);
+
+            if (this.players[this.currentPlayer].isHuman()) {
+                Information information = new Information(this.currentPlayer, this.playerCount, getAllPossibleRules());
+                Result result = this.humanPlayerSupport.placeWrongMarker(level, rules[currentPlayer], information);
+                System.out.println("Ich würde den falschen Marker an Stelle "+result.getX()+" "+result.getY()+" setzen.");
+            }
+        } else {
+            getMainPanel().getButtonByFunction(FUNCTION_TREASURE).setVisible(true);
+            this.level[this.curPickLevelY][this.curPickLevelX].getCorrectGuesses()[player] = true;
+            if (this.level[this.curPickLevelY][this.curPickLevelX].hasOnlyCorrectGuess(this.playerCount)) {
+                this.checkForWin(this.curPickLevelX, this.curPickLevelY);
+            } else {
+                this.setMoreInformation(Status.SET_QUESTION);
+                this.nextPlayer(1);
+            }
+        }
+    }
+
+    private void setMoreInformation(Status status) {
+        int time = noHumanLeft() ? 1 : Constants.WAIT_TIME_MORE;
+
+        this.setPositionForMoreInformation();
+        if (status == Status.SET_QUESTION) {
+            this.moreInformation.setTimer(time,"Arr ... da koennte der Schatz sein.");
+        } else if (status == Status.SET_NOT) {
+            this.moreInformation.setTimer(time, "Nein, da liegt kein Schatz.");
+        } else if (status == Status.ASK) {
+            this.moreInformation.setTimer(time, "Da liegt sicher kein Schatz.");
+        }
+    }
+
+    private void setPositionForMoreInformation() {
+        int changeX = this.changeX + this.curPickLevelX * Constants.TILE_SIZE[this.curTileSize] + this.curPickLevelY * Constants.TILE_SIZE[this.curTileSize]/2 + Constants.TILE_SIZE[this.curTileSize]/2;
+        int changeY = this.changeY + (int)(this.curPickLevelY * Constants.TILE_SIZE[this.curTileSize] * 295f/256f * 0.75f) - 70;
+        if (changeY < Constants.GAME_HEIGHT - 200) {
+            changeY += Constants.TILE_SIZE[this.curTileSize] * 295f/256f + 70;
+        }
+        if (changeX < 300) {
+            changeX = 300;
+        } else if (changeX + 300 > Constants.GAME_WIDTH) {
+            changeX = Constants.GAME_WIDTH - 300;
+        }
+
+        this.moreInformation.setPosition(changeX, changeY);
+    }
+
+    private void setMoreInformationForError(String error) {
+        this.setPositionForMoreInformation();
+        this.moreInformation.setTimer(Constants.WAIT_TIME_MORE,error);
+    }
+
+    private void setInformationForStatus() {
+        if (this.currentStatus == Status.SET_NOT) {
+            this.information.setTimer(Constants.WAIT_TIME_LONGER,"Arr ... da liegt kein Schatz.", "Setze einen Marker auf eine Stelle, die es nicht sein kann.");
+        } else if (this.currentStatus == Status.TREASURE) {
+            this.information.setTimer(Constants.WAIT_TIME_LONGER, "Wo ist der Schatz versteckt?");
+        } else {
+            this.information.setTimer(Constants.WAIT_TIME, "Pirat "+(this.currentPlayer+1)+" ist jetzt am Zug.");
+        }
+    }
+
+    private void setStatus(Status status) {
+        this.currentStatus = status;
+        getMainPanel().getButtonByFunction(FUNCTION_TREASURE).setVisible(true);
+        showAskButtons(false);
+        if (this.currentStatus == Status.SET_QUESTION) {
+            this.curTask = "Finde der Schatz!";
+        } else if (this.currentStatus == Status.ASK) {
+            this.curTask = "Wen fragst du?";
+            getMainPanel().getButtonByFunction(FUNCTION_TREASURE).setVisible(false);
+            showAskButtons(true);
+        } else if (this.currentStatus == Status.SET_NOT) {
+            this.curTask = "Setze den Marker!";
+            getMainPanel().getButtonByFunction(FUNCTION_TREASURE).setVisible(false);
+        } else if (this.currentStatus == Status.TREASURE) {
+            this.curTask = "Wo ist der Schatz?";
+        } else if (this.currentStatus == Status.WON) {
+            getMainPanel().getButtonByFunction(FUNCTION_TREASURE).setVisible(false);
+            this.curTask = "Pirat "+(this.currentPlayer+1)+" gewinnt!";
+        }
+    }
+
+    public void mouseWheelChanged(int changed) {
+        float oldTileSize = Constants.TILE_SIZE[this.curTileSize];
+        this.curTileSize -= changed;
+        if (this.curTileSize < 0) {
+            this.curTileSize = 0;
+        } else if (this.curTileSize >= Constants.TILE_SIZE.length) {
+            this.curTileSize = Constants.TILE_SIZE.length - 1;
+        }
+        float currentTileSize = Constants.TILE_SIZE[this.curTileSize];
+        float dif = currentTileSize / oldTileSize;
+
+        this.changeX *= dif;
+        this.changeY *= dif;
+    }
+
+    @Override
+    protected void quit() {
+		getMainPanel().changeToMenu();
+    }
+
+    @Override
+    public void doThink(float delta) {
+        if (this.currentStatus == Status.WON && this.noHumanInGame()) {
+            if (!this.statistics.isFinished()) {
+                System.out.println("Und gewonnen hat "+this.currentPlayer+" an Position "+this.curPickLevelX+" "+this.curPickLevelY);
+                this.statistics.addWinner(this.currentPlayer);
+                this.newLevel();
+                return;
+            } else {
+                if (this.statistics.isShowAnalyse()) {
+                    this.statistics.addWinner(this.currentPlayer);
+                    System.out.println();
+                    System.out.println("Auswertung:");
+                    for (int i = 0; i < this.statistics.getWinners().length; i++) {
+                        System.out.println("Pirat " + (i + 1) + ": " + this.statistics.getWinners()[i]);
+                    }
+                    System.out.println();
+                    this.statistics.setShowAnalyse(false);
+                }
+            }
+        }
+        if (this.information.getTime() > 0) {
+            this.information.doThink(delta);
+        }
+        if (this.scrollToTile.getGoalX() >= 0) {
+            this.scrollToTile.doThink(delta);
+            if (this.currentStatus != Status.WON && !this.players[this.currentPlayer].isHuman() && this.scrollToTile.getGoalX() < 0) {
+                if (this.currentStatus == Status.SET_QUESTION) {
+//                    GridPoint2 point = getPositionForPlayer(this.lastResult.getAskPlayer());
+//                    this.scrollToTile.moveMouseToPosition(point.x, point.y);
+//                    this.setStatus(Status.ASK);
+                    this.checkPlayerAndSet(this.lastResult.getAskPlayer());
+                } else if (this.currentStatus == Status.TREASURE) {
+                    this.checkForWin();
+                } else if (this.currentStatus == Status.ASK) {
+                    this.checkPlayerAndSet(this.lastResult.getAskPlayer());
+                } else if (this.currentStatus == Status.SET_NOT) {
+                    if (this.level[this.curPickLevelY][this.curPickLevelX] != null) {
+                        this.level[this.curPickLevelY][this.curPickLevelX].getIncorrectGuesses()[this.currentPlayer] = true;
+                    }
+                    this.setMoreInformation(Status.ASK);
+                    this.nextPlayer(1);
+                }
+            }
+        } else if (this.moreInformation.getTime() > 0) {
+            this.moreInformation.doThink(delta);
+        } else if (this.currentStatus != Status.WON && !this.players[this.currentPlayer].isHuman()) {
+            Information information = new Information(this.currentPlayer, this.playerCount, getAllPossibleRules());
+            if (this.currentStatus == Status.SET_QUESTION) {
+                Result result = this.players[this.currentPlayer].placeGuess(level, this.rules[this.currentPlayer], information);
+                this.lastResult = result;
+                this.curPickLevelX = result.getX();
+                this.curPickLevelY = result.getY();
+                if (result.isWantToSolve()) {
+                    this.setStatus(Status.TREASURE);
+                }
+                this.scrollToTile.scrollToPosition(this.curPickLevelX, this.curPickLevelY);
+            } else if (this.currentStatus == Status.SET_NOT) {
+                Result result = this.players[this.currentPlayer].placeWrongMarker(level, this.rules[this.currentPlayer], information);
+                this.curPickLevelX = result.getX();
+                this.curPickLevelY = result.getY();
+                this.scrollToTile.scrollToPosition(this.curPickLevelX, this.curPickLevelY);
+            }
+        }
+
+        int value = (int)(-2 - this.curTileSize * 0.75f);
+        if (this.keys[Input.Keys.LEFT] || this.keys[Input.Keys.A]) {
+            this.setChangeXAndY(-value, 0);
+        } else if (this.keys[Input.Keys.RIGHT] || this.keys[Input.Keys.D]) {
+            this.setChangeXAndY(value, 0);
+        }
+
+        if (this.keys[Input.Keys.UP] || this.keys[Input.Keys.W]) {
+            this.setChangeXAndY(0, -value);
+        } else if (this.keys[Input.Keys.DOWN] || this.keys[Input.Keys.S]) {
+            this.setChangeXAndY(0, value);
+        }
+    }
+
+    private void checkForWin() {
+        this.checkForWin(this.curPickLevelX, this.curPickLevelY);
+        if (this.currentStatus != Status.WON) {
+            this.rules[this.currentPlayer].setOut(true);
+            this.nextPlayer(+1);
+        } else {
+            for (int i = 0; i < this.playerCount; i++) {
+                this.level[this.curPickLevelY][this.curPickLevelX].getCorrectGuesses()[i] = true;
+            }
+        }
+    }
+
+    private GridPoint2 getPositionForPlayer(int askPlayer) {
+        GridPoint2 point = new GridPoint2(-1, -1);
+
+        ApoButton button = getMainPanel().getButtonByFunction(FUNCTION_PLAYER_ONE);
+        if (askPlayer == 1) {
+            button = getMainPanel().getButtonByFunction(FUNCTION_PLAYER_TWO);
+        } else if (askPlayer == 2) {
+            button = getMainPanel().getButtonByFunction(FUNCTION_PLAYER_THREE);
+        } else if (askPlayer == 3) {
+            button = getMainPanel().getButtonByFunction(FUNCTION_PLAYER_FOUR);
+        } else if (askPlayer == 4) {
+            button = getMainPanel().getButtonByFunction(FUNCTION_PLAYER_FIVE);
+        }
+
+        point.x = (int)button.getXMiddle();
+        point.y = (int)(button.getY() + button.getHeight()/2f);
+
+        return point;
+    }
+
+    private Rule[] getAllPossibleRules() {
+        if (this.allPossibleRules == null) {
+            this.allPossibleRules = RuleCreate.getAllRules(this.level, this.difficulty > 0);
+        }
+        return this.allPossibleRules;
+    }
+
+    public boolean noHumanLeft() {
+        for (int i = 0; i < this.players.length; i++) {
+            if (this.players[i].isHuman() && !this.rules[i].isOut()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public boolean noHumanInGame() {
+        for (PiratePlayer player : this.players) {
+            if (player.isHuman()) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+	@Override
+    public void render() {
+		getMainPanel().spriteBatch.begin();
+
+        int tileSize = Constants.TILE_SIZE[this.curTileSize];
+        for (int y = 0; y < this.level.length; y++) {
+            for (int x = 0; x < this.level[0].length; x++) {
+                if (this.level[y][x] != null) {
+                    int changeX = this.changeX + x * tileSize + y * tileSize /2;
+                    int changeY = this.changeY + (int)(y * tileSize * 295f/256f * 0.75f);
+                    if (changeX + tileSize >= 0 && changeY + tileSize * 295f/256f >= 0 && changeX < Constants.GAME_WIDTH && changeY < Constants.GAME_HEIGHT) {
+                        this.level[y][x].render(this.getMainPanel(), changeX, changeY, tileSize);
+                        if (this.level[y][x].hasOnlyCorrectGuess(this.playerCount)) {
+                            this.getMainPanel().spriteBatch.draw(AssetLoader.treasure, changeX + 0.1f * tileSize, changeY + 0.3f * tileSize, tileSize * 0.8f, tileSize * 0.8f * 2f / 3f);
+                        }
+
+                        for (int i = 0; i < this.rules.length; i++) {
+                            boolean[][] solution = this.rules[i].getSolution(this.level);
+                            if (solution[y][x]) {
+                                if (this.showHelp) {
+                                    if ((i == 0 && this.currentStatus != Status.WON) || (this.currentStatus == Status.WON && i == this.currentPlayer)) {
+                                        getMainPanel().spriteBatch.draw(AssetLoader.tilesOverlay[i], changeX, changeY, tileSize, 295f / 256f * tileSize);
+                                    }
+                                }
+                                if (this.showSolution) {
+                                    if (this.rules.length > 3) {
+                                        this.getMainPanel().drawString(String.valueOf(i + 1), changeX + 10 + i * 20, changeY + 40, Constants.COLOR_BLACK, AssetLoader.font15, DrawString.MIDDLE, false, false);
+                                    } else {
+                                        this.getMainPanel().drawString(String.valueOf(i + 1), changeX + 10 + i * 20, changeY + 40, Constants.COLOR_BLACK, AssetLoader.font20, DrawString.MIDDLE, false, false);
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                }
+            }
+        }
+
+        getMainPanel().spriteBatch.end();
+
+        getMainPanel().getRenderer().begin(ShapeRenderer.ShapeType.Filled);
+        for (int y = 0; y < this.level.length; y++) {
+            for (int x = 0; x < this.level[0].length; x++) {
+                if (this.level[y][x] != null) {
+                    int changeX = this.changeX + x * tileSize + y * tileSize / 2;
+                    int changeY = this.changeY + (int) (y * tileSize * 295f / 256f * 0.75f);
+                    if (changeX + tileSize >= 0 && changeY + tileSize * 295f/256f >= 0 && changeX < Constants.GAME_WIDTH && changeY < Constants.GAME_HEIGHT) {
+                        this.level[y][x].renderFilled(this.getMainPanel(), changeX, changeY, tileSize);
+                    }
+                }
+            }
+        }
+        getMainPanel().getRenderer().end();
+
+        getMainPanel().spriteBatch.begin();
+        if (this.curOverLevelX >= 0) {
+            int changeX = this.changeX + this.curOverLevelX * tileSize + this.curOverLevelY * tileSize /2;
+            int changeY = this.changeY + (int)(this.curOverLevelY * tileSize * 295f/256f * 0.75f);
+            getMainPanel().spriteBatch.draw(AssetLoader.tilesOverlay[5], changeX, changeY, tileSize, 295f / 256f * tileSize);
+        }
+
+        this.getMainPanel().spriteBatch.draw(AssetLoader.gameHud, 10,Constants.GAME_HEIGHT - 90 - 5, 735, 90);
+        if (!this.showRules.isVisible()) {
+            int height = 410 - (Constants.PLAYER_COLORS.length - this.playerCount) * 55;
+            this.getMainPanel().spriteBatch.draw(AssetLoader.gameInfo, Constants.GAME_WIDTH - AssetLoader.gameInfo.getRegionWidth() - 10, Constants.GAME_HEIGHT - AssetLoader.gameInfo.getRegionHeight() - 135, 283, height);
+            this.getMainPanel().spriteBatch.draw(AssetLoader.gameInfo, Constants.GAME_WIDTH - AssetLoader.gameInfo.getRegionWidth() - 10, Constants.GAME_HEIGHT - AssetLoader.gameInfo.getRegionHeight() - 135 - 60, 283, 50);
+
+            for (int i = 0; i < this.playerCount; i++) {
+                int cur = this.currentPlayer == i ? 2 : 0;
+                this.getMainPanel().spriteBatch.draw(AssetLoader.playerButton[i][cur], Constants.GAME_WIDTH - AssetLoader.gameInfo.getRegionWidth() + 45,Constants.GAME_HEIGHT - AssetLoader.gameInfo.getRegionHeight() - 80 + i * 65, 50, 50);
+
+                String s = this.players[i].getName();//"Pirat "+(i+1);
+                if (this.currentPlayer == i) {
+                    this.getMainPanel().spriteBatch.draw(AssetLoader.star, Constants.GAME_WIDTH - AssetLoader.gameInfo.getRegionWidth() / 2f - 5,Constants.GAME_HEIGHT - AssetLoader.gameInfo.getRegionHeight() - 80 + i * 65, 50, 50);
+                    this.getMainPanel().drawString(s, Constants.GAME_WIDTH - AssetLoader.gameInfo.getRegionWidth() + 104, Constants.GAME_HEIGHT - AssetLoader.gameInfo.getRegionHeight() - 81 + i * 65, Constants.PLAYER_COLORS[i], AssetLoader.font25, DrawString.BEGIN, false, false);
+                }
+                this.getMainPanel().drawString(s, Constants.GAME_WIDTH - AssetLoader.gameInfo.getRegionWidth() + 103, Constants.GAME_HEIGHT - AssetLoader.gameInfo.getRegionHeight() - 80 + i * 65, Constants.COLOR_WHITE, AssetLoader.font25, DrawString.BEGIN, false, false);
+            }
+        }
+
+        String s;
+        String[] textSplit = this.rules[0].getTextSplit(this.getMainPanel().getGlyphLayout(), AssetLoader.font20);
+        if (this.currentStatus == Status.WON) {
+            textSplit = this.rules[this.currentPlayer].getTextSplit(this.getMainPanel().getGlyphLayout(), AssetLoader.font20);
+        }
+        for (int i = 0; i < textSplit.length; i++) {
+            s = textSplit[i];
+            this.getMainPanel().drawString(s, 380, Constants.GAME_HEIGHT - 90 + 10 + i * 30, Constants.COLOR_WHITE, AssetLoader.font20, DrawString.MIDDLE, false, false);
+        }
+
+
+        if (this.showRules.isVisible()) {
+            this.showRules.render(this.getMainPanel());
+        } else {
+            s = this.curTask;
+            this.getMainPanel().drawString(s, Constants.GAME_WIDTH - AssetLoader.gameInfo.getRegionWidth()/2f - 10, Constants.GAME_HEIGHT - AssetLoader.gameInfo.getRegionHeight() - 135 - 60 + 10, Constants.COLOR_WHITE, AssetLoader.font15, DrawString.MIDDLE, false, false);
+        }
+
+        if (this.currentStatus == Status.ASK) {
+            this.getMainPanel().spriteBatch.draw(AssetLoader.gameHud, 10,10, Constants.GAME_WIDTH - 20, 80);
+            s = "Welcher Pirat soll befragt werden?";
+            this.getMainPanel().drawString(s, 50, 32, Constants.COLOR_WHITE, AssetLoader.font20, DrawString.BEGIN, false, false);
+        } else if (this.currentStatus == Status.WON && this.showWon) {
+            this.getMainPanel().spriteBatch.draw(AssetLoader.scrollWon, 10,10);
+            this.getMainPanel().spriteBatch.draw(AssetLoader.treasure, 130,310, 450, 300);
+
+            s = "Herzlichen Glueckwunsch";
+            this.getMainPanel().drawString(s, 360, 130, Constants.COLOR_BLACK, AssetLoader.font25, DrawString.MIDDLE, false, false);
+
+            s =  "Pirat "+(this.currentPlayer + 1);
+            this.getMainPanel().drawString(s, 360, 160, Constants.COLOR_BLACK, AssetLoader.font25, DrawString.MIDDLE, false, false);
+
+            s = "Du hast den Schatz gefunden!";
+            this.getMainPanel().drawString(s, 360, 240, Constants.COLOR_BLACK, AssetLoader.font25, DrawString.MIDDLE, false, false);
+
+
+        } else {
+            if (this.information.getTime() > 0) {
+                this.information.render(this.getMainPanel());
+            }
+            if (this.moreInformation.getTime() > 0) {
+                this.moreInformation.render(this.getMainPanel());
+                int changeX = this.changeX + this.curPickLevelX * tileSize + this.curPickLevelY * tileSize /2;
+                int changeY = this.changeY + (int)(this.curPickLevelY * tileSize * 295f/256f * 0.75f);
+                getMainPanel().spriteBatch.draw(AssetLoader.tilesOverlay[5], changeX, changeY, tileSize, 295f / 256f * tileSize);
+
+            }
+        }
+
+        if (this.scrollToTile.isScrollMouse() || this.scrollToTile.getGoalX() >= 0) {
+            getMainPanel().spriteBatch.draw(AssetLoader.mouseCursor, this.scrollToTile.getMouseX(), this.scrollToTile.getMouseY(), 30, 45);
+        }
+
+        if (this.showBackQuestion) {
+            int width = 400;
+            int height = 130;
+            this.getMainPanel().spriteBatch.draw(AssetLoader.gameHud, Constants.GAME_WIDTH/2f - width/2f,Constants.GAME_HEIGHT/2f - height/2f, width, height);
+
+            s = "Zurueck zum Menu?";
+            this.getMainPanel().drawString(s, Constants.GAME_WIDTH/2f, Constants.GAME_HEIGHT/2f - 45, Constants.COLOR_WHITE, AssetLoader.font25, DrawString.MIDDLE, false, false);
+        }
+
+        for (ApoButton button : this.getMainPanel().getButtons()) {
+            button.render(this.getMainPanel(), 0, 0, false);
+        }
+
+		getMainPanel().spriteBatch.end();
+
+        if (!this.showRules.isVisible()) {
+            boolean onePlayerOut = false;
+            for (Rule rule : this.rules) {
+                if (rule.isOut()) {
+                    onePlayerOut = true;
+                    break;
+                }
+            }
+            if (onePlayerOut) {
+                getMainPanel().getRenderer().begin(ShapeRenderer.ShapeType.Filled);
+                for (int i = 0; i < this.playerCount; i++) {
+                    if (this.rules[i].isOut()) {
+                        this.getMainPanel().getRenderer().setColor(Constants.COLOR_WHITE[0], Constants.COLOR_WHITE[1], Constants.COLOR_WHITE[2], 1f);
+                        this.getMainPanel().getRenderer().rect(Constants.GAME_WIDTH - AssetLoader.gameInfo.getRegionWidth() + 98, Constants.GAME_HEIGHT - AssetLoader.gameInfo.getRegionHeight() - 80 + i * 65 + 25, 120, 5);
+                    }
+                }
+                getMainPanel().getRenderer().end();
+            }
+        }
+    }
+
+//	        Gdx.graphics.getGL20().glEnable(GL20.GL_BLEND);
+//			Gdx.graphics.getGL20().glDisable(GL20.GL_BLEND);
+//
+//			getMainPanel().getRenderer().begin(ShapeType.Line);
+//			getMainPanel().getRenderer().setColor(Constants.COLOR_WHITE[0], Constants.COLOR_WHITE[1], Constants.COLOR_WHITE[2], 1f);
+//			getMainPanel().getRenderer().roundedRectLine((WIDTH - width)/2f, startY, width, height, 5);
+//			getMainPanel().getRenderer().end();
+
+
+    public void drawOverlay() {
+    }
+
+    @Override
+    public void dispose() {
+    }
+}
