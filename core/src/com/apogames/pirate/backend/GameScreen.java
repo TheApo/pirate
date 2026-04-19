@@ -356,6 +356,7 @@ public class GameScreen implements Screen, InputProcessor {
     }
 
     public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+        Game.markDirty();
         Vector3 screenCoords = new Vector3(screenX, screenY, 0);
         viewport.unproject(screenCoords);
         int x = (int) screenCoords.x;
@@ -378,7 +379,13 @@ public class GameScreen implements Screen, InputProcessor {
         return false;
     }
 
+    @Override
+    public boolean touchCancelled(int screenX, int screenY, int pointer, int button) {
+        return false;
+    }
+
     public boolean touchDragged(int screenX, int screenY, int pointer) {
+        Game.markDirty();
         Vector3 screenCoords = new Vector3(screenX, screenY, 0);
         viewport.unproject(screenCoords);
         int x = (int) screenCoords.x;
@@ -390,6 +397,7 @@ public class GameScreen implements Screen, InputProcessor {
     }
 
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+        Game.markDirty();
         Vector3 screenCoords = new Vector3(screenX, screenY, 0);
         viewport.unproject(screenCoords);
         int x = (int) screenCoords.x;
@@ -412,6 +420,7 @@ public class GameScreen implements Screen, InputProcessor {
     }
 
     public boolean keyDown(int keycode) {
+        Game.markDirty();
         if (this.model != null) {
             keyPressedArray.add(keycode);
             this.model.keyPressed(keycode, (char) (keycode));
@@ -420,6 +429,7 @@ public class GameScreen implements Screen, InputProcessor {
     }
 
     public boolean keyUp(int keycode) {
+        Game.markDirty();
         if (this.model != null) {
             keyReleasedArray.add(keycode);
         }
@@ -427,6 +437,7 @@ public class GameScreen implements Screen, InputProcessor {
     }
 
     public boolean keyTyped(char character) {
+        Game.markDirty();
         if (this.model != null) {
             if ((int) character != 0) {
                 keyReleasedArray.add((int) character);
@@ -437,6 +448,7 @@ public class GameScreen implements Screen, InputProcessor {
 
     @Override
     public boolean mouseMoved(int screenX, int screenY) {
+        Game.markDirty();
         Vector3 screenCoords = new Vector3(screenX, screenY, 0);
         viewport.unproject(screenCoords);
         int x = (int) screenCoords.x;
@@ -458,6 +470,7 @@ public class GameScreen implements Screen, InputProcessor {
 
     @Override
     public boolean scrolled(float amountX, float amountY) {
+        Game.markDirty();
         if (this.model != null) {
             this.model.mouseWheelChanged((int)(amountY));
         }

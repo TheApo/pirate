@@ -1,0 +1,33 @@
+sourceCompatibility = 11
+
+sourceSets.main.java.srcDirs = ["src/"]
+sourceSets.main.resources.srcDirs = ["../assets"]
+
+eclipse.project.name = appName + "-teavm"
+
+tasks.register('buildRelease', JavaExec) {
+    group = 'teavm'
+    description = 'Build TeaVM release'
+    mainClass.set('com.apogames.pirate.teavm.TeaVMBuilder')
+    classpath = sourceSets.main.runtimeClasspath
+    doLast {
+        copy {
+            from 'webapp/index.html'
+            into 'build/dist/webapp'
+        }
+    }
+}
+
+tasks.register('run', JavaExec) {
+    group = 'teavm'
+    description = 'Build and run TeaVM with local server'
+    mainClass.set('com.apogames.pirate.teavm.TeaVMBuilder')
+    classpath = sourceSets.main.runtimeClasspath
+    args '--serve'
+    doLast {
+        copy {
+            from 'webapp/index.html'
+            into 'build/dist/webapp'
+        }
+    }
+}
