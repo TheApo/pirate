@@ -79,6 +79,7 @@ public class GameScreen implements Screen, InputProcessor {
     private final ArrayList<Integer> keyPressedArray = new ArrayList<Integer>();
     private final ArrayList<Integer> keyReleasedArray = new ArrayList<Integer>();
     private boolean bRightClick = false;
+    private boolean pressedOnModel = false;
 
     /**
      * Instantiates a new Game screen.
@@ -195,12 +196,11 @@ public class GameScreen implements Screen, InputProcessor {
             this.buttonFunction = "";
             buttonClickSound();
         }
-        if (this.clickReleasedArray.size() > 0) {
-            for (GridPoint2 aClickReleasedArray : clickReleasedArray) {
-                this.model.mouseButtonReleased(aClickReleasedArray.x, aClickReleasedArray.y, bRightClick);
+        if (this.clickPressedArray.size() > 0) {
+            for (GridPoint2 aClickPressedArray : clickPressedArray) {
+                this.model.mousePressed(aClickPressedArray.x, aClickPressedArray.y, bRightClick);
             }
-            clickReleasedArray.clear();
-            bRightClick = false;
+            clickPressedArray.clear();
         }
         if (this.clickDraggedArray.size() > 0) {
             for (GridPoint2 aClickDraggedArray : clickDraggedArray) {
@@ -208,11 +208,12 @@ public class GameScreen implements Screen, InputProcessor {
             }
             clickDraggedArray.clear();
         }
-        if (this.clickPressedArray.size() > 0) {
-            for (GridPoint2 aClickPressedArray : clickPressedArray) {
-                this.model.mousePressed(aClickPressedArray.x, aClickPressedArray.y, bRightClick);
+        if (this.clickReleasedArray.size() > 0) {
+            for (GridPoint2 aClickReleasedArray : clickReleasedArray) {
+                this.model.mouseButtonReleased(aClickReleasedArray.x, aClickReleasedArray.y, bRightClick);
             }
-            clickPressedArray.clear();
+            clickReleasedArray.clear();
+            bRightClick = false;
         }
         if (this.keyPressedArray.size() > 0) {
             for (Integer aKeyPressedArray : keyPressedArray) {
@@ -376,11 +377,13 @@ public class GameScreen implements Screen, InputProcessor {
             this.clickReleasedArray.add(new GridPoint2(x, y));
 
         }
+        this.pressedOnModel = false;
         return false;
     }
 
     @Override
     public boolean touchCancelled(int screenX, int screenY, int pointer, int button) {
+        this.pressedOnModel = false;
         return false;
     }
 
@@ -390,7 +393,11 @@ public class GameScreen implements Screen, InputProcessor {
         viewport.unproject(screenCoords);
         int x = (int) screenCoords.x;
         int y = (int) screenCoords.y;
-        if (this.model != null) {
+        // Only forward drags that started on the model. If the initial touchDown
+        // was absorbed by a UI button, the model never saw a mousePressed, so we
+        // must not fabricate a drag for it — otherwise oldMouseX gets stuck at
+        // the button position and the next real click produces a huge delta.
+        if (this.model != null && this.pressedOnModel) {
             this.clickDraggedArray.add(new GridPoint2(x, y));
         }
         return false;
@@ -411,6 +418,7 @@ public class GameScreen implements Screen, InputProcessor {
         }
         if (this.model != null) {
             this.clickPressedArray.add(new GridPoint2(x, y));
+            this.pressedOnModel = true;
             if (button == 1) {
                 bRightClick = true;
             }

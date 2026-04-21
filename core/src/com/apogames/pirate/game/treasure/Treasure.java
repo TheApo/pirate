@@ -7,8 +7,8 @@ import com.apogames.pirate.backend.SequentiallyThinkingScreenModel;
 import com.apogames.pirate.common.Localization;
 import com.apogames.pirate.entity.ApoButton;
 import com.apogames.pirate.game.MainPanel;
-import com.apogames.pirate.game.treasure.ai.Hard;
 import com.apogames.pirate.game.treasure.ai.Information;
+import com.apogames.pirate.game.treasure.ai.Perfect;
 import com.apogames.pirate.game.treasure.ai.PiratePlayer;
 import com.apogames.pirate.game.treasure.ai.Result;
 import com.apogames.pirate.game.treasure.create.LevelCreate;
@@ -59,7 +59,7 @@ public class Treasure extends SequentiallyThinkingScreenModel {
 
     private final Statistics statistics = new Statistics(STATISTIC_RUNS);
 
-    private final PiratePlayer humanPlayerSupport = new Hard();
+    private final PiratePlayer humanPlayerSupport = new Perfect();
 
     private int playerCount = 3;
 
@@ -84,6 +84,7 @@ public class Treasure extends SequentiallyThinkingScreenModel {
     private boolean dragged = false;
     private boolean showHelp = false;
     private boolean showSolution = false;
+    private boolean showCoords = false;
 
     private int noActionTime = 0;
     private int blinkTime = 0;
@@ -368,6 +369,9 @@ public class Treasure extends SequentiallyThinkingScreenModel {
         if (keyCode == Input.Keys.C) {
             this.showSolution = !this.showSolution;
         }
+        if (keyCode == Input.Keys.G) {
+            this.showCoords = !this.showCoords;
+        }
         if (keyCode == Input.Keys.N) {
             this.nextPlayer(1);
         }
@@ -455,7 +459,7 @@ public class Treasure extends SequentiallyThinkingScreenModel {
                         if (this.players[this.currentPlayer].isHuman()) {
                             Information information = new Information(this.currentPlayer, this.playerCount, getAllPossibleRules());
                             Result result = this.humanPlayerSupport.placeGuess(level, this.rules[this.currentPlayer], information);
-                            System.out.println("Ich würde an Stelle " + result.getX() + " " + result.getY() + " und Spieler " + result.getAskPlayer() + " befragen.");
+                            System.out.println("[Logiker] würde Spalte=" + result.getX() + " Zeile=" + result.getY() + " nehmen und Pirat " + (result.getAskPlayer() + 1) + " fragen.");
                         }
                         showAskButtons(true);
                     } else if (this.level[this.curPickLevelY][this.curPickLevelX] != null && this.level[this.curPickLevelY][this.curPickLevelX].hasIncorrectGuess()) {
@@ -544,16 +548,12 @@ public class Treasure extends SequentiallyThinkingScreenModel {
 
     public void mouseDragged(int x, int y, boolean isRightButton) {
         if (!this.isPressed || this.oldMouseX < 0) {
-            this.mousePressed(x, y, isRightButton);
+            return;
         }
-        int changeX = x - this.oldMouseX;
-        int changeY = y - this.oldMouseY;
-        if (Math.abs(changeX) + Math.abs(changeY) > 100) {
-            changeX = 0;
-            changeY = 0;
-        }
+        int deltaX = x - this.oldMouseX;
+        int deltaY = y - this.oldMouseY;
 
-        this.setChangeXAndY(changeX, changeY);
+        this.setChangeXAndY(deltaX, deltaY);
         this.oldMouseX = x;
         this.oldMouseY = y;
         this.dragged = true;
@@ -705,7 +705,7 @@ public class Treasure extends SequentiallyThinkingScreenModel {
             if (this.players[this.currentPlayer].isHuman()) {
                 Information information = new Information(this.currentPlayer, this.playerCount, getAllPossibleRules());
                 Result result = this.humanPlayerSupport.placeWrongMarker(level, rules[currentPlayer], information);
-                System.out.println("Ich würde den falschen Marker an Stelle "+result.getX()+" "+result.getY()+" setzen.");
+                System.out.println("[Logiker] würde den NICHT-Marker auf Spalte=" + result.getX() + " Zeile=" + result.getY() + " setzen.");
             }
         } else {
             getMainPanel().getButtonByFunction(FUNCTION_TREASURE).setVisible(true);
@@ -755,11 +755,44 @@ public class Treasure extends SequentiallyThinkingScreenModel {
     private void setInformationForStatus() {
         if (this.currentStatus == Status.SET_NOT) {
             this.information.setTimer(Constants.WAIT_TIME_LONGER, Localization.get("info.no_treasure_here_arr"), Localization.get("info.place_marker_hint"));
+            logLogicianSuggestionForNotMarker();
         } else if (this.currentStatus == Status.TREASURE) {
             this.information.setTimer(Constants.WAIT_TIME_LONGER, Localization.get("info.where_treasure_hidden"));
         } else {
             this.information.setTimer(Constants.WAIT_TIME, Localization.format("task.players_turn", this.currentPlayer + 1));
+            logLogicianSuggestionForGuess();
         }
+    }
+
+    private boolean isCurrentHumanReady() {
+        return this.players != null
+                && this.rules != null
+                && this.currentPlayer >= 0
+                && this.currentPlayer < this.players.length
+                && this.players[this.currentPlayer] != null
+                && this.players[this.currentPlayer].isHuman();
+    }
+
+    private void logLogicianSuggestionForGuess() {
+        if (!isCurrentHumanReady()) {
+            return;
+        }
+        Information info = new Information(this.currentPlayer, this.playerCount, getAllPossibleRules());
+        Result result = this.humanPlayerSupport.placeGuess(this.level, this.rules[this.currentPlayer], info);
+        if (result.isWantToSolve()) {
+            System.out.println("[Logiker] weiss: der Schatz liegt auf Spalte=" + result.getX() + " Zeile=" + result.getY() + ". Jetzt behaupten!");
+        } else {
+            System.out.println("[Logiker] würde Spalte=" + result.getX() + " Zeile=" + result.getY() + " nehmen und Pirat " + (result.getAskPlayer() + 1) + " fragen.");
+        }
+    }
+
+    private void logLogicianSuggestionForNotMarker() {
+        if (!isCurrentHumanReady()) {
+            return;
+        }
+        Information info = new Information(this.currentPlayer, this.playerCount, getAllPossibleRules());
+        Result result = this.humanPlayerSupport.placeWrongMarker(this.level, this.rules[this.currentPlayer], info);
+        System.out.println("[Logiker] würde den NICHT-Marker auf Spalte=" + result.getX() + " Zeile=" + result.getY() + " setzen.");
     }
 
     private void setStatus(Status status) {
@@ -977,6 +1010,9 @@ public class Treasure extends SequentiallyThinkingScreenModel {
                         if (this.level[y][x].hasOnlyCorrectGuess(this.playerCount)) {
                             this.getMainPanel().spriteBatch.draw(AssetLoader.treasure, changeX + 0.1f * tileSize, changeY + 0.3f * tileSize, tileSize * 0.8f, tileSize * 0.8f * 2f / 3f);
                         }
+                        if (this.showCoords) {
+                            this.getMainPanel().drawString(x + "," + y, changeX + tileSize / 2f, changeY + tileSize * 295f / 256f / 2f - 8, Constants.COLOR_BLACK, AssetLoader.font15, DrawString.MIDDLE, false, false);
+                        }
 
                         for (int i = 0; i < this.rules.length; i++) {
                             boolean[][] solution = this.rules[i].getSolution(this.level);
@@ -1141,6 +1177,24 @@ public class Treasure extends SequentiallyThinkingScreenModel {
                 getMainPanel().getRenderer().end();
             }
         }
+
+        renderCurrentPlayerBorder();
+    }
+
+    private static final int PLAYER_BORDER_WIDTH = 6;
+
+    private void renderCurrentPlayerBorder() {
+        if (this.players == null || this.currentPlayer < 0 || this.currentPlayer >= Constants.PLAYER_COLORS.length) {
+            return;
+        }
+        float[] color = Constants.PLAYER_COLORS[this.currentPlayer];
+        getMainPanel().getRenderer().begin(ShapeRenderer.ShapeType.Filled);
+        getMainPanel().getRenderer().setColor(color[0], color[1], color[2], 1f);
+        getMainPanel().getRenderer().rect(0, 0, Constants.GAME_WIDTH, PLAYER_BORDER_WIDTH);
+        getMainPanel().getRenderer().rect(0, Constants.GAME_HEIGHT - PLAYER_BORDER_WIDTH, Constants.GAME_WIDTH, PLAYER_BORDER_WIDTH);
+        getMainPanel().getRenderer().rect(0, 0, PLAYER_BORDER_WIDTH, Constants.GAME_HEIGHT);
+        getMainPanel().getRenderer().rect(Constants.GAME_WIDTH - PLAYER_BORDER_WIDTH, 0, PLAYER_BORDER_WIDTH, Constants.GAME_HEIGHT);
+        getMainPanel().getRenderer().end();
     }
 
 //	        Gdx.graphics.getGL20().glEnable(GL20.GL_BLEND);

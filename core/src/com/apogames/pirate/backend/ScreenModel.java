@@ -27,7 +27,9 @@
 
 package com.apogames.pirate.backend;
 
+import com.apogames.pirate.Constants;
 import com.apogames.pirate.common.KeyCodes;
+import com.badlogic.gdx.Input;
 import com.apogames.pirate.game.MainPanel;
 import com.badlogic.gdx.utils.Disposable;
 
@@ -95,12 +97,15 @@ public abstract class ScreenModel implements Disposable {
      * @param character the character
      */
     public void keyButtonReleased(int button, char character) {
+        if (button == Input.Keys.F) {
+            Constants.FPS = !Constants.FPS;
+        }
         for (int exitCode : KeyCodes.EXIT) {
         	if (button == exitCode) {
         		quit();
         		break;
         	}
-        	
+
         }
         // Optional hook
     }

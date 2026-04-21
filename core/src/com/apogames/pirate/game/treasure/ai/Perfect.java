@@ -39,6 +39,9 @@ public class Perfect extends PiratePlayer {
         if (solutionClear) {
             for (int y = 0; y < level.length; y++) {
                 for (int x = 0; x < level[0].length; x++) {
+                    if (level[y][x] == null || level[y][x].hasIncorrectGuess()) {
+                        continue;
+                    }
                     boolean realSolution = true;
                     for (int i = 0; i < info.getMaxPlayer(); i++) {
                         boolean[][] solution = this.possiblePlayerRules.get(i).get(0).getSolution(level);
@@ -75,11 +78,9 @@ public class Perfect extends PiratePlayer {
             }
         } else {
             foundPlayer = -1;
-            //GridPoint3 bestPointToAsk = getBestPointToAsk(level, info.getPlayer());
             GridPoint3 bestPointToAsk = getNextBestPointToAsk(level, info.getPlayer());
             resultX = bestPointToAsk.x;
             resultY = bestPointToAsk.y;
-            //System.out.println("Best Point "+resultX+" "+resultY);
             if (foundPlayer < 0) {
                 if (bestPointToAsk.z < 0) {
                     possiblePlayersAsSolution = getPossibleSolutionsForPoint(resultX, resultY, level, info.getPlayer());
@@ -139,10 +140,11 @@ public class Perfect extends PiratePlayer {
             this.foundPlayer = 1;
             return pointOnlyOne;
         }
-        int best = -1;
+        ArrayList<GridPoint3> bestCandidates = new ArrayList<>();
+        int bestDistance = Integer.MAX_VALUE;
         for (int y = 0; y < level.length; y++) {
             for (int x = 0; x < level[0].length; x++) {
-                if (level[y][x] != null) {
+                if (level[y][x] != null && !level[y][x].hasIncorrectGuess()) {
                     boolean possibleCorrect = true;
                     int bestPlayer = -1;
                     int counter = 0;
@@ -167,11 +169,13 @@ public class Perfect extends PiratePlayer {
                             if (!possibleRuleCorrect) {
                                 possibleCorrect = false;
                             }
-                            if (Math.abs(curBest - rules.size()/2) < Math.abs(best - rules.size()/2)) {
-                                point.x = x;
-                                point.y = y;
-                                point.z = bestPlayer;
-                                best = curBest;
+                            int currentDistance = Math.abs(curBest - rules.size() / 2);
+                            if (currentDistance < bestDistance) {
+                                bestCandidates.clear();
+                                bestCandidates.add(new GridPoint3(x, y, bestPlayer));
+                                bestDistance = currentDistance;
+                            } else if (currentDistance == bestDistance) {
+                                bestCandidates.add(new GridPoint3(x, y, bestPlayer));
                             }
                         }
                         if (foundPossible != 1) {
@@ -197,6 +201,12 @@ public class Perfect extends PiratePlayer {
                 }
             }
         }
+        if (!bestCandidates.isEmpty()) {
+            GridPoint3 chosen = bestCandidates.get((int)(Math.random() * bestCandidates.size()));
+            point.x = chosen.x;
+            point.y = chosen.y;
+            point.z = chosen.z;
+        }
         return point;
     }
 
@@ -213,7 +223,7 @@ public class Perfect extends PiratePlayer {
         boolean[][] currentSolution = new boolean[level.length][level[0].length];
         for (int y = 0; y < level.length; y++) {
             for (int x = 0; x < level[0].length; x++) {
-                if (level[y][x] != null) {
+                if (level[y][x] != null && !level[y][x].hasIncorrectGuess()) {
                     currentSolution[y][x] = true;
                     for (ArrayList<Rule> possiblePlayerRule : this.possiblePlayerRules) {
                         if (possiblePlayerRule.size() == 1) {

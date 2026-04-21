@@ -136,7 +136,8 @@ public class Tutorial extends SequentiallyThinkingScreenModel {
 
             if (this.currentStep == TutorialStep.GAME_ASKING) {
                 if (function.equals(Treasure.FUNCTION_PLAYER_ONE) || function.equals(Treasure.FUNCTION_PLAYER_ONE_HUD)
-                        || function.equals(Treasure.FUNCTION_PLAYER_TWO) || function.equals(Treasure.FUNCTION_PLAYER_TWO_HUD)) {
+                        || function.equals(Treasure.FUNCTION_PLAYER_TWO) || function.equals(Treasure.FUNCTION_PLAYER_TWO_HUD)
+                        || function.equals(Treasure.FUNCTION_HELP)) {
                     this.treasure.mouseButtonFunction(function);
                 }
             } else if (this.currentStep == TutorialStep.GAME_SHOW_NOTICE_INFO) {

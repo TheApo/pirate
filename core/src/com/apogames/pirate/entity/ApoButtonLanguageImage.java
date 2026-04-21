@@ -28,12 +28,11 @@ public class ApoButtonLanguageImage extends ApoButtonImageWithThree {
         if (!isVisible()) {
             return;
         }
-        boolean beganBatch = needNewSpriteBatch;
-        if (beganBatch) {
+        if (needNewSpriteBatch) {
             screen.spriteBatch.begin();
         }
         screen.drawString(getText(),getXMiddle() + changeX,getY() + changeY + getHeight() / 2f, Constants.COLOR_WHITE, getFont(), DrawString.MIDDLE,true,false);
-        if (beganBatch) {
+        if (needNewSpriteBatch) {
             screen.spriteBatch.end();
         }
     }

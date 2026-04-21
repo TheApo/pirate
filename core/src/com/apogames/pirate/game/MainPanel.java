@@ -1,6 +1,8 @@
 package com.apogames.pirate.game;
 
 import com.apogames.pirate.Constants;
+import com.apogames.pirate.asset.AssetLoader;
+import com.apogames.pirate.backend.DrawString;
 import com.apogames.pirate.backend.GameScreen;
 import com.apogames.pirate.backend.ScreenModel;
 import com.apogames.pirate.backend.io.IOOnlineLibgdx;
@@ -115,6 +117,11 @@ public class MainPanel extends GameScreen {
         if (model != null) {
             model.render();
             model.drawOverlay();
+            if (Constants.FPS) {
+                spriteBatch.begin();
+                drawString("FPS: " + Gdx.graphics.getFramesPerSecond(), Constants.GAME_WIDTH - 5, 5, Constants.COLOR_WHITE, AssetLoader.font20, DrawString.END, false, false);
+                spriteBatch.end();
+            }
         }
     }
 
