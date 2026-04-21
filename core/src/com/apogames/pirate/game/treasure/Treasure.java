@@ -245,6 +245,19 @@ public class Treasure extends SequentiallyThinkingScreenModel {
         return currentStatus;
     }
 
+    private void repositionAskTopButtons() {
+        String askText = Localization.get("hud.ask_which_pirate");
+        Constants.glyphLayout.setText(AssetLoader.font20, askText);
+        float textEnd = Constants.GAME_WIDTH / 2f + Constants.glyphLayout.width / 2f;
+        int buttonWidth = 50;
+        int gap = 15;
+        int startX = (int)(textEnd + 20);
+        String[] funcs = {FUNCTION_PLAYER_ONE, FUNCTION_PLAYER_TWO, FUNCTION_PLAYER_THREE, FUNCTION_PLAYER_FOUR, FUNCTION_PLAYER_FIVE};
+        for (int i = 0; i < funcs.length; i++) {
+            getMainPanel().getButtonByFunction(funcs[i]).setX(startX + i * (buttonWidth + gap));
+        }
+    }
+
     public void setTutorial(boolean tutorial) {
         this.tutorial = tutorial;
     }
@@ -262,6 +275,9 @@ public class Treasure extends SequentiallyThinkingScreenModel {
     }
 
     public void showAskButtons(boolean visible) {
+        if (visible) {
+            repositionAskTopButtons();
+        }
         getMainPanel().getButtonByFunction(FUNCTION_PLAYER_ONE).setVisible(visible);
         getMainPanel().getButtonByFunction(FUNCTION_PLAYER_ONE_HUD).setVisible(visible);
         getMainPanel().getButtonByFunction(FUNCTION_PLAYER_TWO).setVisible(visible);
@@ -302,8 +318,7 @@ public class Treasure extends SequentiallyThinkingScreenModel {
         this.currentPlayer = 0;
         this.setStatus(Status.SET_QUESTION);
 
-        this.changeX = -400;
-        this.changeY = 2;
+        centerLevelInView();
 
         this.tutorial = false;
         this.setInformationForStatus();
@@ -544,15 +559,49 @@ public class Treasure extends SequentiallyThinkingScreenModel {
         this.dragged = true;
     }
 
-    private void setChangeXAndY(int changeX, int changeY) {
-        if ((this.changeX + changeX < 130 || changeX < 0) &&
-                (this.changeX + changeX > (-this.level[0].length * Constants.TILE_SIZE[this.curTileSize] - this.level.length/2 * Constants.TILE_SIZE[this.curTileSize] + Constants.GAME_WIDTH) || changeX > 0)) {
-            this.changeX += changeX;
+    private static final int MIN_VISIBLE = 200;
+
+    private void setChangeXAndY(int deltaX, int deltaY) {
+        this.changeX = clamp(this.changeX + deltaX, levelMinX(), levelMaxX());
+        this.changeY = clamp(this.changeY + deltaY, levelMinY(), levelMaxY());
+    }
+
+    private void centerLevelInView() {
+        this.changeX = Math.max(0, (Constants.GAME_WIDTH - levelPixelWidth()) / 2);
+        this.changeY = (Constants.GAME_HEIGHT - levelPixelHeight()) / 2;
+    }
+
+    private int levelPixelWidth() {
+        int tileSize = Constants.TILE_SIZE[this.curTileSize];
+        return this.level[0].length * tileSize + this.level.length / 2 * tileSize;
+    }
+
+    private int levelPixelHeight() {
+        int tileSize = Constants.TILE_SIZE[this.curTileSize];
+        return (int)(this.level.length * tileSize * 295f / 256f * 0.75f + tileSize * 295f / 256f * 0.25f);
+    }
+
+    private int levelMinX() {
+        return MIN_VISIBLE - levelPixelWidth();
+    }
+
+    private int levelMaxX() {
+        return Constants.GAME_WIDTH - MIN_VISIBLE;
+    }
+
+    private int levelMinY() {
+        return MIN_VISIBLE - levelPixelHeight();
+    }
+
+    private int levelMaxY() {
+        return Constants.GAME_HEIGHT - MIN_VISIBLE;
+    }
+
+    private static int clamp(int value, int min, int max) {
+        if (min > max) {
+            return (min + max) / 2;
         }
-        if ((this.changeY + changeY < 170 || changeY < 0) &&
-                ((this.changeY + changeY > -this.level.length * Constants.TILE_SIZE[this.curTileSize] * 295f/256f * 0.75f + 500) || changeY > 0)) {
-            this.changeY += changeY;
-        }
+        return Math.max(min, Math.min(max, value));
     }
 
     private void changeShowBackQuestion(boolean showBack) {
@@ -975,7 +1024,9 @@ public class Treasure extends SequentiallyThinkingScreenModel {
             getMainPanel().spriteBatch.draw(AssetLoader.tilesOverlay[5], changeX, changeY, tileSize, 295f / 256f * tileSize);
         }
 
-        this.getMainPanel().spriteBatch.draw(AssetLoader.gameHud, 10,Constants.GAME_HEIGHT - 90 - 5, 735, 90);
+        int bottomHudWidth = 735;
+        int bottomHudX = (Constants.GAME_WIDTH - bottomHudWidth) / 2;
+        this.getMainPanel().spriteBatch.draw(AssetLoader.gameHud, bottomHudX, Constants.GAME_HEIGHT - 90 - 5, bottomHudWidth, 90);
         if (!this.showRules.isVisible()) {
             int height = 410 - (Constants.PLAYER_COLORS.length - this.playerCount) * 55;
             this.getMainPanel().spriteBatch.draw(AssetLoader.gameInfo, Constants.GAME_WIDTH - AssetLoader.gameInfo.getRegionWidth() - 10, Constants.GAME_HEIGHT - AssetLoader.gameInfo.getRegionHeight() - 135, 283, height);
@@ -1004,7 +1055,7 @@ public class Treasure extends SequentiallyThinkingScreenModel {
         }
         for (int i = 0; i < textSplit.length; i++) {
             s = textSplit[i];
-            this.getMainPanel().drawString(s, 380, Constants.GAME_HEIGHT - 90 + 10 + i * 30, Constants.COLOR_WHITE, AssetLoader.font20, DrawString.MIDDLE, false, false);
+            this.getMainPanel().drawString(s, bottomHudX + bottomHudWidth / 2f, Constants.GAME_HEIGHT - 90 + 10 + i * 30, Constants.COLOR_WHITE, AssetLoader.font20, DrawString.MIDDLE, false, false);
         }
 
 
@@ -1022,19 +1073,21 @@ public class Treasure extends SequentiallyThinkingScreenModel {
         if (this.currentStatus == Status.ASK) {
             this.getMainPanel().spriteBatch.draw(AssetLoader.gameHud, 10,10, Constants.GAME_WIDTH - 20, 80);
             s = Localization.get("hud.ask_which_pirate");
-            this.getMainPanel().drawString(s, 50, 32, Constants.COLOR_WHITE, AssetLoader.font20, DrawString.BEGIN, false, false);
+            this.getMainPanel().drawString(s, Constants.GAME_WIDTH / 2f, 32, Constants.COLOR_WHITE, AssetLoader.font20, DrawString.MIDDLE, false, false);
         } else if (this.currentStatus == Status.WON && this.showWon) {
-            this.getMainPanel().spriteBatch.draw(AssetLoader.scrollWon, 10,10);
-            this.getMainPanel().spriteBatch.draw(AssetLoader.treasure, 130,310, 450, 300);
+            float wonCenterX = Constants.GAME_WIDTH / 2f;
+            float wonX = wonCenterX - 350;
+            this.getMainPanel().spriteBatch.draw(AssetLoader.scrollWon, wonX, 10);
+            this.getMainPanel().spriteBatch.draw(AssetLoader.treasure, wonX + 120, 310, 450, 300);
 
             s = Localization.get("hud.congratulations");
-            this.getMainPanel().drawString(s, 360, 130, Constants.COLOR_BLACK, AssetLoader.font25, DrawString.MIDDLE, false, false);
+            this.getMainPanel().drawString(s, wonCenterX, 130, Constants.COLOR_BLACK, AssetLoader.font25, DrawString.MIDDLE, false, false);
 
             s = Localization.format("hud.pirate_won", this.wonPlayer);
-            this.getMainPanel().drawString(s, 360, 160, Constants.COLOR_BLACK, AssetLoader.font25, DrawString.MIDDLE, false, false);
+            this.getMainPanel().drawString(s, wonCenterX, 160, Constants.COLOR_BLACK, AssetLoader.font25, DrawString.MIDDLE, false, false);
 
             s = Localization.get("hud.found_treasure");
-            this.getMainPanel().drawString(s, 360, 240, Constants.COLOR_BLACK, AssetLoader.font25, DrawString.MIDDLE, false, false);
+            this.getMainPanel().drawString(s, wonCenterX, 240, Constants.COLOR_BLACK, AssetLoader.font25, DrawString.MIDDLE, false, false);
 
 
         } else {

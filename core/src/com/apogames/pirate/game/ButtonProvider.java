@@ -57,7 +57,7 @@ public class ButtonProvider {
 			String function = Menu.FUNCTION_QUIT;
 			int width = 64;
 			int height = 64;
-			int x = Constants.GAME_WIDTH - width - 25;
+			int x = Constants.MENU_OFFSET_X + Constants.MENU_WIDTH - width - 25;
 			int y = Constants.GAME_HEIGHT - height - 25;
 			ApoButtonImageWithThree button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.quitButton);
 			//ApoButtonColor(x, y, width, height, function, text, Constants.COLOR_BACKGROUND, Constants.COLOR_WHITE);
@@ -67,6 +67,7 @@ public class ButtonProvider {
 
 			text = "";
 			function = Treasure.FUNCTION_BACK;
+			x = Constants.GAME_WIDTH - width - 25;
 			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.quitButton);
 			button.setFont(font);
 			button.setMouseOverTextKey(AssetLoader.gameHud, "button.menu");
@@ -239,7 +240,7 @@ public class ButtonProvider {
 
 			text = "";
 			function = Menu.FUNCTION_PLAYER_ONE;
-			x = (int)(Constants.GAME_WIDTH * 0.1f - width/2f);
+			x = (int)(Constants.MENU_OFFSET_X + Constants.MENU_WIDTH * 0.1f - width/2f);
 			y = 310;
 			width = 50;
 			height = 50;
@@ -250,7 +251,7 @@ public class ButtonProvider {
 
 			text = "";
 			function = Menu.FUNCTION_PLAYER_TWO;
-			x = (int)(Constants.GAME_WIDTH * 0.3f - width/2f);
+			x = (int)(Constants.MENU_OFFSET_X + Constants.MENU_WIDTH * 0.3f - width/2f);
 			y = 310;
 			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.playerButton[1]);
 			button.setFont(font);
@@ -259,7 +260,7 @@ public class ButtonProvider {
 
 			text = "";
 			function = Menu.FUNCTION_PLAYER_THREE;
-			x = (int)(Constants.GAME_WIDTH * 0.5f - width/2f);
+			x = (int)(Constants.MENU_OFFSET_X + Constants.MENU_WIDTH * 0.5f - width/2f);
 			y = 310;
 			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.playerButton[2]);
 			button.setFont(font);
@@ -268,7 +269,7 @@ public class ButtonProvider {
 
 			text = "";
 			function = Menu.FUNCTION_PLAYER_FOUR;
-			x = (int)(Constants.GAME_WIDTH * 0.7f - width/2f);
+			x = (int)(Constants.MENU_OFFSET_X + Constants.MENU_WIDTH * 0.7f - width/2f);
 			y = 310;
 			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.playerButton[3]);
 			button.setFont(font);
@@ -277,7 +278,7 @@ public class ButtonProvider {
 
 			text = "";
 			function = Menu.FUNCTION_PLAYER_FIVE;
-			x = (int)(Constants.GAME_WIDTH * 0.9f - width/2f);
+			x = (int)(Constants.MENU_OFFSET_X + Constants.MENU_WIDTH * 0.9f - width/2f);
 			y = 310;
 			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.playerButton[4]);
 			button.setFont(font);
@@ -348,7 +349,7 @@ public class ButtonProvider {
 			function = Menu.FUNCTION_TUTORIAL;
 			width = 64;
 			height = 61;
-			x = 10;
+			x = Constants.MENU_OFFSET_X + 10;
 			y = Constants.GAME_HEIGHT - height - 10;
 			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.tutorialButton);
 			button.setFont(font);
@@ -358,7 +359,7 @@ public class ButtonProvider {
 			function = Menu.FUNCTION_LANGUAGE;
 			width = 64;
 			height = 61;
-			x = 10;
+			x = Constants.MENU_OFFSET_X + 10;
 			y = 10;
 			ApoButtonLanguageImage languageButton = new ApoButtonLanguageImage(x, y, width, height, function, AssetLoader.helpButton);
 			languageButton.setFont(AssetLoader.font25);

@@ -193,7 +193,7 @@ public class Tutorial extends SequentiallyThinkingScreenModel {
         this.getMainPanel().spriteBatch.begin();
         if (this.currentStep == TutorialStep.GAME_START) {
             this.showTutorialStep(Localization.get("tutorial.step.one").split(";"));
-            this.getMainPanel().spriteBatch.draw(AssetLoader.treasure, 400, 520, 225, 150);
+            this.getMainPanel().spriteBatch.draw(AssetLoader.treasure, Constants.GAME_WIDTH / 2f - 112, 520, 225, 150);
         }
 
         if (this.currentStep == TutorialStep.GAME_OVERVIEW) {
@@ -218,9 +218,10 @@ public class Tutorial extends SequentiallyThinkingScreenModel {
 
         if (this.currentStep == TutorialStep.GAME_SHOW_NOTICE) {
             this.showTutorialStep(Localization.get("tutorial.step.x").split(";"));
-            this.getMainPanel().spriteBatch.draw(AssetLoader.helpButton[0], 480, 205, 64, 61);
-            this.getMainPanel().spriteBatch.draw(AssetLoader.ruleButton[0], 480, 330, 64, 61);
-            this.getMainPanel().spriteBatch.draw(AssetLoader.treasureButton[0], 480, 485, 64, 61);
+            float buttonX = Constants.GAME_WIDTH / 2f - 32;
+            this.getMainPanel().spriteBatch.draw(AssetLoader.helpButton[0], buttonX, 205, 64, 61);
+            this.getMainPanel().spriteBatch.draw(AssetLoader.ruleButton[0], buttonX, 330, 64, 61);
+            this.getMainPanel().spriteBatch.draw(AssetLoader.treasureButton[0], buttonX, 485, 64, 61);
         }
 
         if (this.currentStep == TutorialStep.GAME_SHOW_NOTICE_INFO) {

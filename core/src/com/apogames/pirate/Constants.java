@@ -45,8 +45,11 @@ public class Constants {
     public static final double VERSION = 0.01;
     public static boolean FPS = false;
     public static final int MAX_SCALE = 1;
-    public static final int GAME_WIDTH = 1024 * MAX_SCALE;
+    public static final int GAME_WIDTH = 1500 * MAX_SCALE;
     public static final int GAME_HEIGHT = 900 * MAX_SCALE;
+
+    public static final int MENU_WIDTH = 1024 * MAX_SCALE;
+    public static final int MENU_OFFSET_X = (GAME_WIDTH - MENU_WIDTH) / 2;
     public static final int WAIT_TIME = 5000;
     public static final int WAIT_TIME_MORE = 3000;
     public static final int WAIT_TIME_LONGER = 7500;

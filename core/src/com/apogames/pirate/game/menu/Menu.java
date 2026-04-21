@@ -254,10 +254,10 @@ public class Menu extends SequentiallyThinkingScreenModel {
     public void render() {
 		getMainPanel().spriteBatch.begin();
 
-		this.getMainPanel().spriteBatch.draw(AssetLoader.backgroundTextureRegion, 0,0);
+		this.getMainPanel().spriteBatch.draw(AssetLoader.backgroundTextureRegion, Constants.MENU_OFFSET_X, 0);
 		this.getMainPanel().spriteBatch.draw(AssetLoader.gameInfo, Constants.GAME_WIDTH/2f - 300, 380, 600, 475);
 
-		this.getMainPanel().spriteBatch.draw(AssetLoader.gameHud, 10, 225, Constants.GAME_WIDTH - 20, 155);
+		this.getMainPanel().spriteBatch.draw(AssetLoader.gameHud, Constants.MENU_OFFSET_X + 10, 225, Constants.MENU_WIDTH - 20, 155);
 
 		String s = Localization.get("program_name");
 		this.getMainPanel().drawString(s, Constants.GAME_WIDTH / 2f, 65, Constants.COLOR_BLACK, AssetLoader.font30, DrawString.MIDDLE, false, false);
@@ -271,7 +271,7 @@ public class Menu extends SequentiallyThinkingScreenModel {
 			} else {
 				s = Localization.get("menu.player_empty");
 			}
-			this.getMainPanel().drawString(s, Constants.GAME_WIDTH * (0.1f + i * 0.2f), 275, Constants.COLOR_WHITE, AssetLoader.font20, DrawString.MIDDLE, false, false);
+			this.getMainPanel().drawString(s, Constants.MENU_OFFSET_X + Constants.MENU_WIDTH * (0.1f + i * 0.2f), 275, Constants.COLOR_WHITE, AssetLoader.font20, DrawString.MIDDLE, false, false);
 		}
 
 		s = Localization.get("menu.difficulty");
