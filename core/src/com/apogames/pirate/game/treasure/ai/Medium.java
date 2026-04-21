@@ -1,5 +1,6 @@
 package com.apogames.pirate.game.treasure.ai;
 
+import com.apogames.pirate.common.Localization;
 import com.apogames.pirate.game.treasure.Rule;
 import com.apogames.pirate.game.treasure.Tile;
 
@@ -10,7 +11,7 @@ public class Medium extends PiratePlayer {
     private ArrayList<ArrayList<Rule>> possiblePlayerRules = new ArrayList<>();
 
     public String getName() {
-        return "Mittel";
+        return Localization.get("ai.medium");
     }
 
     private int maxAdd = 0;

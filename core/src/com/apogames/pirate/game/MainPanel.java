@@ -6,6 +6,7 @@ import com.apogames.pirate.backend.ScreenModel;
 import com.apogames.pirate.backend.io.IOOnlineLibgdx;
 import com.apogames.pirate.game.menu.Menu;
 import com.apogames.pirate.game.treasure.Treasure;
+import com.apogames.pirate.game.tutorial.Tutorial;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer.ShapeType;
 
@@ -13,6 +14,7 @@ public class MainPanel extends GameScreen {
 	
     private Menu menu;
     private Treasure game;
+    private Tutorial tutorial;
 
     private float scale = 1;
 
@@ -32,6 +34,9 @@ public class MainPanel extends GameScreen {
         }
         if (this.game == null) {
             this.game = new Treasure(this);
+        }
+        if (this.tutorial == null) {
+            this.tutorial = new Tutorial(this);
         }
         if (this.ioOnline == null) {
         	this.ioOnline = new IOOnlineLibgdx();
@@ -56,6 +61,11 @@ public class MainPanel extends GameScreen {
     public final void changeToGame() {
         changeModel(game);
         this.game.setSettings(this.menu.getPlayers(), this.menu.getDifficulty(), this.menu.getSize());
+    }
+
+    public final void changeToTutorial() {
+        changeModel(tutorial);
+        this.tutorial.setAllScreenModels(this.menu, this.game);
     }
 
     /**

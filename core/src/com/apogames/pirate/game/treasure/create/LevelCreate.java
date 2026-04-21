@@ -8,8 +8,9 @@ public class LevelCreate {
 
     public LevelCreate(int size, boolean hard) {
         boolean big = size == 1;
+        boolean gigantic = size == 2;
 
-        int levelX = big ? 21 : 15;
+        int levelX = big ? 21 : (gigantic ? 27 : 15);
         this.level = new Tile[12][levelX];
         LevelMiniMap levelMiniMap = new LevelMiniMap();
         Tile[][] level = levelMiniMap.getLevel();
@@ -38,7 +39,7 @@ public class LevelCreate {
                 }
             }
         }
-        if (big) {
+        if (big || gigantic) {
             for (int i = 0; i < 2; i++) {
                 levelMiniMap.createRandomLevelMiniMap();
                 nextLevel = levelMiniMap.getLevel();
@@ -46,6 +47,19 @@ public class LevelCreate {
                     for (int x = 0; x < nextLevel[0].length; x++) {
                         if (nextLevel[y][x] != null) {
                             this.level[y][x + 12 + i * 3] = nextLevel[y][x];
+                        }
+                    }
+                }
+            }
+            if (gigantic) {
+                for (int i = 0; i < 2; i++) {
+                    levelMiniMap.createRandomLevelMiniMap();
+                    nextLevel = levelMiniMap.getLevel();
+                    for (int y = 0; y < nextLevel.length; y++) {
+                        for (int x = 0; x < nextLevel[0].length; x++) {
+                            if (nextLevel[y][x] != null) {
+                                this.level[y][x + 18 + i * 3] = nextLevel[y][x];
+                            }
                         }
                     }
                 }
@@ -81,7 +95,7 @@ public class LevelCreate {
             }
         }
 
-        if (big) {
+        if (big || gigantic) {
             for (int i = 0; i < 2; i++) {
                 levelMiniMap.createRandomLevelMiniMap();
                 nextLevel = levelMiniMap.getLevel();
@@ -93,9 +107,22 @@ public class LevelCreate {
                     }
                 }
             }
+            if (gigantic) {
+                for (int i = 0; i < 2; i++) {
+                    levelMiniMap.createRandomLevelMiniMap();
+                    nextLevel = levelMiniMap.getLevel();
+                    for (int y = 0; y < nextLevel.length; y++) {
+                        for (int x = 0; x < nextLevel[0].length; x++) {
+                            if (nextLevel[y][x] != null) {
+                                this.level[y + 6][x + 15 + i * 3] = nextLevel[y][x];
+                            }
+                        }
+                    }
+                }
+            }
         }
 
-        LevelExtraObjectives extraObjectives = new LevelExtraObjectives(this.level, hard);
+        LevelExtraObjectives extraObjectives = new LevelExtraObjectives(this.level, hard, size);
 
         this.level = extraObjectives.getLevel();
     }

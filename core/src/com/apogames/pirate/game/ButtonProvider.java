@@ -31,6 +31,7 @@ import com.apogames.pirate.Constants;
 import com.apogames.pirate.asset.AssetLoader;
 import com.apogames.pirate.entity.ApoButton;
 import com.apogames.pirate.entity.ApoButtonImageWithThree;
+import com.apogames.pirate.entity.ApoButtonLanguageImage;
 import com.apogames.pirate.game.menu.Menu;
 import com.apogames.pirate.game.treasure.Treasure;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -68,7 +69,7 @@ public class ButtonProvider {
 			function = Treasure.FUNCTION_BACK;
 			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.quitButton);
 			button.setFont(font);
-			button.setMouseOverText(AssetLoader.gameHud, "Menu");
+			button.setMouseOverTextKey(AssetLoader.gameHud, "button.menu");
 			this.game.getButtons().add(button);
 
 			text = "";
@@ -76,7 +77,7 @@ public class ButtonProvider {
 			x = Constants.GAME_WIDTH - width * 2 - 50;
 			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.helpButton);
 			button.setFont(font);
-			button.setMouseOverText(AssetLoader.gameHud, "Regelbeschreibung");
+			button.setMouseOverTextKey(AssetLoader.gameHud, "button.rules_description");
 			this.game.getButtons().add(button);
 
 			text = "";
@@ -84,7 +85,16 @@ public class ButtonProvider {
 			x = Constants.GAME_WIDTH - width * 2 - 50;
 			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.playAgainButton);
 			button.setFont(font);
-			button.setMouseOverText(AssetLoader.gameHud, "Neues Level");
+			button.setMouseOverTextKey(AssetLoader.gameHud, "button.new_level");
+			this.game.getButtons().add(button);
+
+			text = "";
+			function = Treasure.FUNCTION_NEXT_PLAYER;
+			x = Constants.GAME_WIDTH - width - 25;
+			y = 180;
+			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.rightButton);
+			button.setFont(font);
+			button.setMouseOverTextKey(AssetLoader.gameHud, "button.next_player");
 			this.game.getButtons().add(button);
 
 			text = "";
@@ -94,7 +104,7 @@ public class ButtonProvider {
 			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.ruleButton);
 			//ApoButtonColor(x, y, width, height, function, text, Constants.COLOR_BACKGROUND, Constants.COLOR_WHITE);
 			button.setFont(font);
-			button.setMouseOverText(AssetLoader.gameHud, "Eigenen Hinweis anzeigen oder ausschalten");
+			button.setMouseOverTextKey(AssetLoader.gameHud, "button.toggle_hint");
 			this.game.getButtons().add(button);
 
 			text = "";
@@ -102,7 +112,7 @@ public class ButtonProvider {
 			x = Constants.GAME_WIDTH - width - 25;
 			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.treasureButton);
 			button.setFont(font);
-			button.setMouseOverText(AssetLoader.gameHud, "Ich will Loesen!");
+			button.setMouseOverTextKey(AssetLoader.gameHud, "button.solve");
 			this.game.getButtons().add(button);
 
 			text = "";
@@ -113,7 +123,7 @@ public class ButtonProvider {
 			y = 28;
 			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.playerButton[0]);
 			button.setFont(font);
-			button.setMouseOverText(AssetLoader.gameHud, "Frage Pirat 1");
+			button.setMouseOverTextKey(AssetLoader.gameHud, "button.ask_pirate", 1);
 			this.game.getButtons().add(button);
 
 			text = "";
@@ -121,7 +131,7 @@ public class ButtonProvider {
 			x = 550 + width * 2 + 15;
 			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.playerButton[1]);
 			button.setFont(font);
-			button.setMouseOverText(AssetLoader.gameHud, "Frage Pirat 2");
+			button.setMouseOverTextKey(AssetLoader.gameHud, "button.ask_pirate", 2);
 			this.game.getButtons().add(button);
 
 			text = "";
@@ -129,7 +139,7 @@ public class ButtonProvider {
 			x = 550 + width * 3 + 2 * 15;
 			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.playerButton[2]);
 			button.setFont(font);
-			button.setMouseOverText(AssetLoader.gameHud, "Frage Pirat 3");
+			button.setMouseOverTextKey(AssetLoader.gameHud, "button.ask_pirate", 3);
 			this.game.getButtons().add(button);
 
 			text = "";
@@ -137,7 +147,7 @@ public class ButtonProvider {
 			x = 550 + width * 4 + 3 * 15;
 			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.playerButton[3]);
 			button.setFont(font);
-			button.setMouseOverText(AssetLoader.gameHud, "Frage Pirat 4");
+			button.setMouseOverTextKey(AssetLoader.gameHud, "button.ask_pirate", 4);
 			this.game.getButtons().add(button);
 
 			text = "";
@@ -145,7 +155,7 @@ public class ButtonProvider {
 			x = 550 + width * 5 + 4 * 15;
 			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.playerButton[4]);
 			button.setFont(font);
-			button.setMouseOverText(AssetLoader.gameHud, "Frage Pirat 5");
+			button.setMouseOverTextKey(AssetLoader.gameHud, "button.ask_pirate", 5);
 			this.game.getButtons().add(button);
 
 			text = "";
@@ -156,7 +166,7 @@ public class ButtonProvider {
 			y = Constants.GAME_HEIGHT - AssetLoader.gameInfo.getRegionHeight() - 80 + 0 * 65;
 			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.playerButton[0]);
 			button.setFont(font);
-			button.setMouseOverText(AssetLoader.gameHud, "Frage Pirat 1");
+			button.setMouseOverTextKey(AssetLoader.gameHud, "button.ask_pirate", 1);
 			this.game.getButtons().add(button);
 
 			text = "";
@@ -164,7 +174,7 @@ public class ButtonProvider {
 			y = Constants.GAME_HEIGHT - AssetLoader.gameInfo.getRegionHeight() - 80 + 1 * 65;
 			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.playerButton[1]);
 			button.setFont(font);
-			button.setMouseOverText(AssetLoader.gameHud, "Frage Pirat 2");
+			button.setMouseOverTextKey(AssetLoader.gameHud, "button.ask_pirate", 2);
 			this.game.getButtons().add(button);
 
 			text = "";
@@ -172,7 +182,7 @@ public class ButtonProvider {
 			y = Constants.GAME_HEIGHT - AssetLoader.gameInfo.getRegionHeight() - 80 + 2 * 65;
 			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.playerButton[2]);
 			button.setFont(font);
-			button.setMouseOverText(AssetLoader.gameHud, "Frage Pirat 3");
+			button.setMouseOverTextKey(AssetLoader.gameHud, "button.ask_pirate", 3);
 			this.game.getButtons().add(button);
 
 			text = "";
@@ -180,7 +190,7 @@ public class ButtonProvider {
 			y = Constants.GAME_HEIGHT - AssetLoader.gameInfo.getRegionHeight() - 80 + 3 * 65;
 			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.playerButton[3]);
 			button.setFont(font);
-			button.setMouseOverText(AssetLoader.gameHud, "Frage Pirat 4");
+			button.setMouseOverTextKey(AssetLoader.gameHud, "button.ask_pirate", 4);
 			this.game.getButtons().add(button);
 
 			text = "";
@@ -188,7 +198,7 @@ public class ButtonProvider {
 			y = Constants.GAME_HEIGHT - AssetLoader.gameInfo.getRegionHeight() - 80 + 4 * 65;
 			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.playerButton[4]);
 			button.setFont(font);
-			button.setMouseOverText(AssetLoader.gameHud, "Frage Pirat 5");
+			button.setMouseOverTextKey(AssetLoader.gameHud, "button.ask_pirate", 5);
 			this.game.getButtons().add(button);
 
 
@@ -235,7 +245,7 @@ public class ButtonProvider {
 			height = 50;
 			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.playerButton[0]);
 			button.setFont(font);
-			button.setMouseOverText(AssetLoader.gameHud, "Pirat 1", true);
+			button.setMouseOverTextKeyBottom(AssetLoader.gameHud, "button.pirate", 1);
 			this.game.getButtons().add(button);
 
 			text = "";
@@ -244,7 +254,7 @@ public class ButtonProvider {
 			y = 310;
 			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.playerButton[1]);
 			button.setFont(font);
-			button.setMouseOverText(AssetLoader.gameHud, "Pirat 2", true);
+			button.setMouseOverTextKeyBottom(AssetLoader.gameHud, "button.pirate", 2);
 			this.game.getButtons().add(button);
 
 			text = "";
@@ -253,7 +263,7 @@ public class ButtonProvider {
 			y = 310;
 			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.playerButton[2]);
 			button.setFont(font);
-			button.setMouseOverText(AssetLoader.gameHud, "Pirat 3", true);
+			button.setMouseOverTextKeyBottom(AssetLoader.gameHud, "button.pirate", 3);
 			this.game.getButtons().add(button);
 
 			text = "";
@@ -262,7 +272,7 @@ public class ButtonProvider {
 			y = 310;
 			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.playerButton[3]);
 			button.setFont(font);
-			button.setMouseOverText(AssetLoader.gameHud, "Pirat 4", true);
+			button.setMouseOverTextKeyBottom(AssetLoader.gameHud, "button.pirate", 4);
 			this.game.getButtons().add(button);
 
 			text = "";
@@ -271,7 +281,7 @@ public class ButtonProvider {
 			y = 310;
 			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.playerButton[4]);
 			button.setFont(font);
-			button.setMouseOverText(AssetLoader.gameHud, "Pirat 5", true);
+			button.setMouseOverTextKeyBottom(AssetLoader.gameHud, "button.pirate", 5);
 			this.game.getButtons().add(button);
 
 			text = "";
@@ -333,7 +343,28 @@ public class ButtonProvider {
 			button.setStroke(3);
 			button.setFont(font);
 			this.game.getButtons().add(button);
-			
+
+			text = "";
+			function = Menu.FUNCTION_TUTORIAL;
+			width = 64;
+			height = 61;
+			x = 10;
+			y = Constants.GAME_HEIGHT - height - 10;
+			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.tutorialButton);
+			button.setFont(font);
+			button.setMouseOverTextKey(AssetLoader.gameHud, "button.tutorial");
+			this.game.getButtons().add(button);
+
+			function = Menu.FUNCTION_LANGUAGE;
+			width = 64;
+			height = 61;
+			x = 10;
+			y = 10;
+			ApoButtonLanguageImage languageButton = new ApoButtonLanguageImage(x, y, width, height, function, AssetLoader.helpButton);
+			languageButton.setFont(AssetLoader.font25);
+			languageButton.setMouseOverTextKey(AssetLoader.gameHud, "button.language");
+			this.game.getButtons().add(languageButton);
+
 //			text = "";
 //			function = ChristmasTrain.START;
 //			width = 60;

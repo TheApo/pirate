@@ -1,12 +1,13 @@
 package com.apogames.pirate.game.treasure.ai;
 
+import com.apogames.pirate.common.Localization;
 import com.apogames.pirate.game.treasure.Rule;
 import com.apogames.pirate.game.treasure.Tile;
 
 public class Easy extends PiratePlayer {
 
     public String getName() {
-        return "Einfach";
+        return Localization.get("ai.easy");
     }
 
     @Override

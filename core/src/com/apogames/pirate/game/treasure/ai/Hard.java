@@ -1,5 +1,6 @@
 package com.apogames.pirate.game.treasure.ai;
 
+import com.apogames.pirate.common.Localization;
 import com.apogames.pirate.game.treasure.Rule;
 import com.apogames.pirate.game.treasure.Tile;
 import com.badlogic.gdx.math.GridPoint2;
@@ -13,7 +14,7 @@ public class Hard extends PiratePlayer {
     private int foundPlayer = -1;
 
     public String getName() {
-        return "Schwer";
+        return Localization.get("ai.hard");
     }
 
     public void init() {

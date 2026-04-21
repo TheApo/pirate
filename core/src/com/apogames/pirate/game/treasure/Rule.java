@@ -1,5 +1,6 @@
 package com.apogames.pirate.game.treasure;
 
+import com.apogames.pirate.common.Localization;
 import com.apogames.pirate.game.treasure.enums.Background;
 import com.apogames.pirate.game.treasure.enums.ExtraObjective;
 import com.apogames.pirate.game.treasure.enums.TileColor;
@@ -10,41 +11,33 @@ import java.util.ArrayList;
 
 public class Rule {
 
+    private enum Kind { BACKGROUNDS_LIST, BACKGROUND_NEAR, COLOR, HABITAT, OBJECT }
+
+    private final Kind kind;
     private ArrayList<Background> backgrounds;
     private TileColor color;
     private ExtraObjective objective;
     private int distance;
     private boolean not = false;
-    private String text;
+
     private String[] textSplit;
+    private String textSplitLang;
     private boolean[][] solution;
     private boolean out = false;
 
     public Rule(ArrayList<Background> backgrounds, boolean not) {
         this.not = not;
-        String add = "";
-        if (this.not) {
-            add = "NICHT ";
-        }
         this.backgrounds = backgrounds;
         this.distance = 0;
-        this.text = "Der Schatz ist "+add+"auf einem der folgenden Untergruende: ";
-        for (Background background : backgrounds) {
-            this.text += background.name() + " oder ";
-        }
-        this.text = this.text.substring(0, this.text.length() - 6);
+        this.kind = Kind.BACKGROUNDS_LIST;
     }
 
     public Rule(Background background, boolean not) {
         this.not = not;
-        String add = "";
-        if (this.not) {
-            add = "NICHT ";
-        }
         this.backgrounds = new ArrayList<>();
         this.backgrounds.add(background);
-        this.text = "Der Schatz liegt "+add+"in einem Umkreis von bis zu 1 Feld vom "+background.name()+" Untergrund.";
         this.distance = 1;
+        this.kind = Kind.BACKGROUND_NEAR;
     }
 
     public Rule(ExtraObjective objective, TileColor color, int distance, boolean not) {
@@ -52,17 +45,13 @@ public class Rule {
         this.color = color;
         this.objective = objective;
         this.distance = distance;
-
-        String add = "";
-        if (this.not) {
-            add = "NICHT ";
-        }
         if (this.objective == null) {
-            this.text = "Der Schatz liegt "+add+"in einem Umkreis von bis zu "+this.distance+" Feldern von den "+this.color.name()+" Objekten.";
-        } else if (this.objective == ExtraObjective.BEARS || this.objective == ExtraObjective.RED_PANDA) {
-            this.text = "Der Schatz liegt "+add+"in einem Umkreis von bis zu "+this.distance+" Feldern von einem "+this.objective.name()+" Habitat.";
+            this.kind = Kind.COLOR;
+        } else if (this.objective == ExtraObjective.BEARS || this.objective == ExtraObjective.RED_PANDA
+                || this.objective == ExtraObjective.WHITE_SHEEP || this.objective == ExtraObjective.BLACK_SHEEP) {
+            this.kind = Kind.HABITAT;
         } else {
-            this.text = "Der Schatz liegt "+add+"in einem Umkreis von bis zu "+this.distance+" Feldern von einem "+this.objective.name()+" Objekt.";
+            this.kind = Kind.OBJECT;
         }
     }
 
@@ -91,28 +80,52 @@ public class Rule {
     }
 
     public String getText() {
-        return text;
+        String notPrefix = this.not ? Localization.get("rule.not_prefix") + " " : "";
+        switch (this.kind) {
+            case BACKGROUNDS_LIST: {
+                StringBuilder list = new StringBuilder();
+                String separator = Localization.get("rule.or_separator");
+                for (int i = 0; i < backgrounds.size(); i++) {
+                    if (i > 0) {
+                        list.append(separator).append(' ');
+                    }
+                    list.append(backgrounds.get(i).name());
+                }
+                return Localization.format("rule.on_backgrounds", notPrefix, list.toString());
+            }
+            case BACKGROUND_NEAR:
+                return Localization.format("rule.near_one_background", notPrefix, backgrounds.get(0).name());
+            case COLOR:
+                return Localization.format("rule.near_color", notPrefix, distance, color.name());
+            case HABITAT:
+                return Localization.format("rule.near_habitat", notPrefix, distance, objective.name());
+            case OBJECT:
+            default:
+                return Localization.format("rule.near_object", notPrefix, distance, objective.name());
+        }
     }
 
     public String[] getTextSplit(GlyphLayout glyphLayout, BitmapFont font) {
-        if (this.textSplit == null) {
+        String currentLang = Localization.getInstance().getLocale().getLanguage();
+        if (this.textSplit == null || !currentLang.equals(this.textSplitLang)) {
+            String text = getText();
             glyphLayout.setText(font, text);
             if (glyphLayout.width > 600) {
-                int indexSpace = this.text.indexOf(" ");
-                String curText = this.text.substring(0, indexSpace);
+                int indexSpace = text.indexOf(" ");
+                String curText = text.substring(0, indexSpace);
                 glyphLayout.setText(font, curText);
                 while (glyphLayout.width < 500) {
-                    indexSpace = this.text.indexOf(" ", indexSpace + 1);
-                    curText = this.text.substring(0, indexSpace);
+                    indexSpace = text.indexOf(" ", indexSpace + 1);
+                    curText = text.substring(0, indexSpace);
                     glyphLayout.setText(font, curText);
                 }
                 this.textSplit = new String[2];
                 this.textSplit[0] = curText;
-                this.textSplit[1] = this.text.substring(indexSpace + 1);
+                this.textSplit[1] = text.substring(indexSpace + 1);
             } else {
-                this.textSplit = new String[1];
-                this.textSplit[0] = this.text;
+                this.textSplit = new String[]{text};
             }
+            this.textSplitLang = currentLang;
         }
         return this.textSplit;
     }

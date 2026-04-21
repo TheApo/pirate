@@ -114,3 +114,8 @@ Thumbs.db
 /ios/IOSLauncher.app.dSYM
 
 teavm/build/
+
+decompiled-output/
+
+# Decompiler artifacts
+/decompiled-output/

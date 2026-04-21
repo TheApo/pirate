@@ -30,10 +30,9 @@ public class RuleCreate {
             }
             rule = new Rule(chosenBackgrounds, not);
         } else if (random < 40) {
-            ExtraObjective extra = ExtraObjective.BEARS;
-            if (Math.random() * 100 > 50) {
-                extra = ExtraObjective.RED_PANDA;
-            }
+            HashSet<ExtraObjective> animalSet = getAllAnimals(level);
+            ArrayList<ExtraObjective> animals = new ArrayList<>(animalSet);
+            ExtraObjective extra = animals.get((int)(Math.random() * animals.size()));
 
             rule = new Rule(extra, TileColor.BLACK, 2, not);
         } else if (random < 60) {
@@ -61,15 +60,31 @@ public class RuleCreate {
         HashSet<ExtraObjective> hashSet = new HashSet<>();
         for (int y = 0; y < level.length; y++) {
             for (int x = 0; x < level[0].length; x++) {
-                if (level[y][x] != null && level[y][x].getObjective() != null) {
-                    if (level[y][x].getObjective() != ExtraObjective.BEARS && level[y][x].getObjective() != ExtraObjective.RED_PANDA) {
-                        hashSet.add(level[y][x].getObjective());
-                    }
+                if (level[y][x] != null && level[y][x].getObjective() != null && !isAnimal(level[y][x].getObjective())) {
+                    hashSet.add(level[y][x].getObjective());
                 }
             }
         }
 
         return hashSet;
+    }
+
+    private static HashSet<ExtraObjective> getAllAnimals(Tile[][] level) {
+        HashSet<ExtraObjective> hashSet = new HashSet<>();
+        for (int y = 0; y < level.length; y++) {
+            for (int x = 0; x < level[0].length; x++) {
+                if (level[y][x] != null && level[y][x].getObjective() != null && isAnimal(level[y][x].getObjective())) {
+                    hashSet.add(level[y][x].getObjective());
+                }
+            }
+        }
+
+        return hashSet;
+    }
+
+    private static boolean isAnimal(ExtraObjective objective) {
+        return objective == ExtraObjective.BEARS || objective == ExtraObjective.RED_PANDA
+                || objective == ExtraObjective.WHITE_SHEEP || objective == ExtraObjective.BLACK_SHEEP;
     }
 
     private static HashSet<Background> getAllBackgrounds(Tile[][] level) {
@@ -120,12 +135,13 @@ public class RuleCreate {
         }
 
         // habitat
-        if (withNot) {
-            allRules.add(new Rule(ExtraObjective.BEARS, TileColor.BLACK, 2, true));
-            allRules.add(new Rule(ExtraObjective.RED_PANDA, TileColor.BLACK, 2, true));
+        HashSet<ExtraObjective> animalSet = getAllAnimals(level);
+        for (ExtraObjective animal : animalSet) {
+            allRules.add(new Rule(animal, TileColor.BLACK, 2, false));
+            if (withNot) {
+                allRules.add(new Rule(animal, TileColor.BLACK, 2, true));
+            }
         }
-        allRules.add(new Rule(ExtraObjective.BEARS, TileColor.BLACK, 2, false));
-        allRules.add(new Rule(ExtraObjective.RED_PANDA, TileColor.BLACK, 2, false));
 
         // objectives
         HashSet<ExtraObjective> allObjectives = getAllObjectives(level);

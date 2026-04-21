@@ -4,6 +4,7 @@ import com.apogames.pirate.Constants;
 import com.apogames.pirate.asset.AssetLoader;
 import com.apogames.pirate.backend.DrawString;
 import com.apogames.pirate.backend.SequentiallyThinkingScreenModel;
+import com.apogames.pirate.common.Localization;
 import com.apogames.pirate.entity.ApoButton;
 import com.apogames.pirate.game.MainPanel;
 import com.apogames.pirate.game.treasure.ai.Hard;
@@ -24,6 +25,8 @@ import java.util.ArrayList;
 public class Treasure extends SequentiallyThinkingScreenModel {
 
     private final int STATISTIC_RUNS = 0;
+    private static final int NO_ACTION_MESSAGE_TIME = 30000;
+    private static final int BLINK_TIME = 800;
 
     private int curTileSize = 1;
 
@@ -50,6 +53,7 @@ public class Treasure extends SequentiallyThinkingScreenModel {
     public static final String FUNCTION_RULES_LEFT = "rules_left";
     public static final String FUNCTION_RULES_RIGHT = "rules_right";
     public static final String FUNCTION_PLAY_AGAIN = "play_again";
+    public static final String FUNCTION_NEXT_PLAYER = "next_player";
 
     private final boolean[] keys = new boolean[256];
 
@@ -67,6 +71,7 @@ public class Treasure extends SequentiallyThinkingScreenModel {
     private Rule[] rules;
 
     private int currentPlayer = 0;
+    private int wonPlayer = 0;
 
     private int changeX = -100;
     private int changeY = 0;
@@ -74,9 +79,15 @@ public class Treasure extends SequentiallyThinkingScreenModel {
     private int oldMouseX = 0;
     private int oldMouseY = 0;
 
+    private boolean tutorial = false;
     private boolean isPressed = false;
+    private boolean dragged = false;
     private boolean showHelp = false;
     private boolean showSolution = false;
+
+    private int noActionTime = 0;
+    private int blinkTime = 0;
+    private boolean blink = false;
 
     private int countRules = 0;
 
@@ -176,6 +187,7 @@ public class Treasure extends SequentiallyThinkingScreenModel {
             for (int x = 0; x < this.level[0].length; x++) {
                 if (tiles[x] != null) {
                     tiles[x].resetGuessed();
+                    tiles[x].setEntities(Constants.TILE_SIZE[this.curTileSize]);
                 }
             }
         }
@@ -187,11 +199,16 @@ public class Treasure extends SequentiallyThinkingScreenModel {
             this.humanPlayerSupport.init();
         }
 
+        this.showRules.setLevel(this.level);
         if (this.showRules.isVisible()) {
             changeVisibilityForShowRules();
         }
         getMainPanel().getButtonByFunction(FUNCTION_PLAY_AGAIN).setVisible(false);
+        getMainPanel().getButtonByFunction(FUNCTION_NEXT_PLAYER).setVisible(false);
         this.changeShowBackQuestion(false);
+        this.noActionTime = 0;
+        this.blinkTime = 0;
+        this.blink = false;
     }
 
     private boolean isInRules(Rule randomRule, int maxI) {
@@ -220,7 +237,28 @@ public class Treasure extends SequentiallyThinkingScreenModel {
         getMainPanel().getButtonByFunction(FUNCTION_TREASURE).setVisible(true);
         getMainPanel().getButtonByFunction(FUNCTION_RULES).setVisible(true);
         getMainPanel().getButtonByFunction(FUNCTION_PLAY_AGAIN).setVisible(false);
+        getMainPanel().getButtonByFunction(FUNCTION_NEXT_PLAYER).setVisible(false);
         showAskButtons(false);
+    }
+
+    public Status getCurrentStatus() {
+        return currentStatus;
+    }
+
+    public void setTutorial(boolean tutorial) {
+        this.tutorial = tutorial;
+    }
+
+    public boolean isCurrentPlayerHuman() {
+        return this.players[this.currentPlayer].isHuman();
+    }
+
+    public boolean isInformationShown() {
+        return this.moreInformation.getTime() > 0;
+    }
+
+    public ShowRules getShowRules() {
+        return showRules;
     }
 
     public void showAskButtons(boolean visible) {
@@ -267,6 +305,7 @@ public class Treasure extends SequentiallyThinkingScreenModel {
         this.changeX = -400;
         this.changeY = 2;
 
+        this.tutorial = false;
         this.setInformationForStatus();
 	}
 
@@ -357,8 +396,20 @@ public class Treasure extends SequentiallyThinkingScreenModel {
         }
     }
 
-    public void mouseButtonReleased(int mouseX, int mouseY, boolean isRightButton) {
+    public void mouseButtonReleasedTutorial() {
         this.isPressed = false;
+        this.dragged = false;
+        this.curPickLevelX = -1;
+        this.curPickLevelY = -1;
+    }
+
+    public void mouseButtonReleased(int mouseX, int mouseY, boolean isRightButton) {
+        this.noActionTime = 0;
+        this.isPressed = false;
+        boolean curDragged = this.dragged;
+        this.dragged = false;
+        this.oldMouseX = -1;
+        this.oldMouseY = -1;
 
         if (this.currentStatus == Status.WON && !isRightButton) {
             this.showWon = !this.showWon;
@@ -374,7 +425,7 @@ public class Treasure extends SequentiallyThinkingScreenModel {
             return;
         }
 
-        if (this.currentStatus != Status.ASK && !isRightButton && this.players[this.currentPlayer].isHuman()) {
+        if (this.currentStatus != Status.ASK && !isRightButton && !curDragged && this.players[this.currentPlayer].isHuman()) {
             this.curPickLevelX = -1;
             this.curPickLevelY = -1;
 
@@ -393,7 +444,7 @@ public class Treasure extends SequentiallyThinkingScreenModel {
                         }
                         showAskButtons(true);
                     } else if (this.level[this.curPickLevelY][this.curPickLevelX] != null && this.level[this.curPickLevelY][this.curPickLevelX].hasIncorrectGuess()) {
-                        this.setMoreInformationForError("Da kann der Schatz nicht liegen.");
+                        this.setMoreInformationForError(Localization.get("info.cannot_be_here"));
                     }
                 } else if (this.currentStatus == Status.SET_NOT) {
                     if (this.level[this.curPickLevelY][this.curPickLevelX] != null &&
@@ -403,7 +454,7 @@ public class Treasure extends SequentiallyThinkingScreenModel {
                         setMoreInformation(Status.ASK);
                         this.nextPlayer(1);
                     } else {
-                        this.setMoreInformationForError("Waehle ein Feld, wo der Schatz NICHT liegen kann.");
+                        this.setMoreInformationForError(Localization.get("info.choose_not_here"));
                     }
                 } else if (this.currentStatus == Status.TREASURE) {
                     checkForWin();
@@ -413,6 +464,9 @@ public class Treasure extends SequentiallyThinkingScreenModel {
             this.setStatus(Status.SET_QUESTION);
             this.showAskButtons(false);
 
+        } else if (this.curPickLevelX != -1) {
+            this.curPickLevelX = -1;
+            this.curPickLevelY = -1;
         }
     }
 
@@ -437,6 +491,7 @@ public class Treasure extends SequentiallyThinkingScreenModel {
             getMainPanel().getButtonByFunction(FUNCTION_RULES).setVisible(false);
             getMainPanel().getButtonByFunction(FUNCTION_TREASURE).setVisible(false);
             getMainPanel().getButtonByFunction(FUNCTION_PLAY_AGAIN).setVisible(true);
+            getMainPanel().getButtonByFunction(FUNCTION_NEXT_PLAYER).setVisible(true);
             this.setStatus(Status.WON);
             showWon = true;
         }
@@ -463,7 +518,9 @@ public class Treasure extends SequentiallyThinkingScreenModel {
     }
 
     public void mousePressed(int x, int y, boolean isRightButton) {
-        if (isRightButton && !this.isPressed) {
+        this.noActionTime = 0;
+        this.mouseMoved(x, y);
+        if (((isRightButton || !this.dragged) && !this.isPressed) || this.oldMouseX < 0) {
             this.isPressed = true;
             this.oldMouseX = x;
             this.oldMouseY = y;
@@ -471,17 +528,20 @@ public class Treasure extends SequentiallyThinkingScreenModel {
     }
 
     public void mouseDragged(int x, int y, boolean isRightButton) {
-        if (isRightButton) {
-            if (!this.isPressed) {
-                this.mousePressed(x, y, isRightButton);
-            }
-            int changeX = x - this.oldMouseX;
-            int changeY = y - this.oldMouseY;
-
-            this.setChangeXAndY(changeX, changeY);
-            this.oldMouseX = x;
-            this.oldMouseY = y;
+        if (!this.isPressed || this.oldMouseX < 0) {
+            this.mousePressed(x, y, isRightButton);
         }
+        int changeX = x - this.oldMouseX;
+        int changeY = y - this.oldMouseY;
+        if (Math.abs(changeX) + Math.abs(changeY) > 100) {
+            changeX = 0;
+            changeY = 0;
+        }
+
+        this.setChangeXAndY(changeX, changeY);
+        this.oldMouseX = x;
+        this.oldMouseY = y;
+        this.dragged = true;
     }
 
     private void setChangeXAndY(int changeX, int changeY) {
@@ -569,6 +629,9 @@ public class Treasure extends SequentiallyThinkingScreenModel {
             case Treasure.FUNCTION_PLAY_AGAIN:
                 this.newLevel();
                 break;
+            case Treasure.FUNCTION_NEXT_PLAYER:
+                this.nextPlayer(1);
+                break;
         }
     }
 
@@ -612,11 +675,11 @@ public class Treasure extends SequentiallyThinkingScreenModel {
 
         this.setPositionForMoreInformation();
         if (status == Status.SET_QUESTION) {
-            this.moreInformation.setTimer(time,"Arr ... da koennte der Schatz sein.");
+            this.moreInformation.setTimer(time, Localization.get("info.could_be_treasure"));
         } else if (status == Status.SET_NOT) {
-            this.moreInformation.setTimer(time, "Nein, da liegt kein Schatz.");
+            this.moreInformation.setTimer(time, Localization.get("info.no_treasure_here"));
         } else if (status == Status.ASK) {
-            this.moreInformation.setTimer(time, "Da liegt sicher kein Schatz.");
+            this.moreInformation.setTimer(time, Localization.get("info.surely_no_treasure"));
         }
     }
 
@@ -642,32 +705,34 @@ public class Treasure extends SequentiallyThinkingScreenModel {
 
     private void setInformationForStatus() {
         if (this.currentStatus == Status.SET_NOT) {
-            this.information.setTimer(Constants.WAIT_TIME_LONGER,"Arr ... da liegt kein Schatz.", "Setze einen Marker auf eine Stelle, die es nicht sein kann.");
+            this.information.setTimer(Constants.WAIT_TIME_LONGER, Localization.get("info.no_treasure_here_arr"), Localization.get("info.place_marker_hint"));
         } else if (this.currentStatus == Status.TREASURE) {
-            this.information.setTimer(Constants.WAIT_TIME_LONGER, "Wo ist der Schatz versteckt?");
+            this.information.setTimer(Constants.WAIT_TIME_LONGER, Localization.get("info.where_treasure_hidden"));
         } else {
-            this.information.setTimer(Constants.WAIT_TIME, "Pirat "+(this.currentPlayer+1)+" ist jetzt am Zug.");
+            this.information.setTimer(Constants.WAIT_TIME, Localization.format("task.players_turn", this.currentPlayer + 1));
         }
     }
 
     private void setStatus(Status status) {
+        this.noActionTime = 0;
         this.currentStatus = status;
         getMainPanel().getButtonByFunction(FUNCTION_TREASURE).setVisible(true);
         showAskButtons(false);
         if (this.currentStatus == Status.SET_QUESTION) {
-            this.curTask = "Finde der Schatz!";
+            this.curTask = Localization.get("task.find_treasure");
         } else if (this.currentStatus == Status.ASK) {
-            this.curTask = "Wen fragst du?";
+            this.curTask = Localization.get("task.ask_whom");
             getMainPanel().getButtonByFunction(FUNCTION_TREASURE).setVisible(false);
             showAskButtons(true);
         } else if (this.currentStatus == Status.SET_NOT) {
-            this.curTask = "Setze den Marker!";
+            this.curTask = Localization.get("task.place_marker");
             getMainPanel().getButtonByFunction(FUNCTION_TREASURE).setVisible(false);
         } else if (this.currentStatus == Status.TREASURE) {
-            this.curTask = "Wo ist der Schatz?";
+            this.curTask = Localization.get("task.where_treasure");
         } else if (this.currentStatus == Status.WON) {
             getMainPanel().getButtonByFunction(FUNCTION_TREASURE).setVisible(false);
-            this.curTask = "Pirat "+(this.currentPlayer+1)+" gewinnt!";
+            this.wonPlayer = this.currentPlayer + 1;
+            this.curTask = Localization.format("task.pirate_wins", this.wonPlayer);
         }
     }
 
@@ -754,6 +819,16 @@ public class Treasure extends SequentiallyThinkingScreenModel {
                 this.curPickLevelY = result.getY();
                 this.scrollToTile.scrollToPosition(this.curPickLevelX, this.curPickLevelY);
             }
+        } else if (this.currentStatus != Status.WON) {
+            thinkBlink(delta);
+        }
+
+        for (Tile[] tiles : this.level) {
+            for (int x = 0; x < this.level[0].length; x++) {
+                if (tiles[x] != null) {
+                    tiles[x].doThink(delta, Constants.TILE_SIZE[this.curTileSize]);
+                }
+            }
         }
 
         int value = (int)(-2 - this.curTileSize * 0.75f);
@@ -767,6 +842,17 @@ public class Treasure extends SequentiallyThinkingScreenModel {
             this.setChangeXAndY(0, -value);
         } else if (this.keys[Input.Keys.DOWN] || this.keys[Input.Keys.S]) {
             this.setChangeXAndY(0, value);
+        }
+    }
+
+    private void thinkBlink(float delta) {
+        this.noActionTime = (int)(this.noActionTime + delta);
+        if (this.noActionTime > NO_ACTION_MESSAGE_TIME) {
+            this.blinkTime = (int)(this.blinkTime + delta);
+            if (this.blinkTime > BLINK_TIME) {
+                this.blinkTime = 0;
+                this.blink = !this.blink;
+            }
         }
     }
 
@@ -901,7 +987,10 @@ public class Treasure extends SequentiallyThinkingScreenModel {
 
                 String s = this.players[i].getName();//"Pirat "+(i+1);
                 if (this.currentPlayer == i) {
-                    this.getMainPanel().spriteBatch.draw(AssetLoader.star, Constants.GAME_WIDTH - AssetLoader.gameInfo.getRegionWidth() / 2f - 5,Constants.GAME_HEIGHT - AssetLoader.gameInfo.getRegionHeight() - 80 + i * 65, 50, 50);
+                    if (this.noActionTime < NO_ACTION_MESSAGE_TIME || !this.blink) {
+                        this.getMainPanel().spriteBatch.draw(AssetLoader.star, Constants.GAME_WIDTH - AssetLoader.gameInfo.getRegionWidth() / 2f - 5,Constants.GAME_HEIGHT - AssetLoader.gameInfo.getRegionHeight() - 80 + i * 65, 50, 50);
+                    }
+                    this.getMainPanel().spriteBatch.draw(AssetLoader.arrow, Constants.GAME_WIDTH - AssetLoader.gameInfo.getRegionWidth() - 10 - 43, Constants.GAME_HEIGHT - AssetLoader.gameInfo.getRegionHeight() - 80 + i * 65, 42, 42);
                     this.getMainPanel().drawString(s, Constants.GAME_WIDTH - AssetLoader.gameInfo.getRegionWidth() + 104, Constants.GAME_HEIGHT - AssetLoader.gameInfo.getRegionHeight() - 81 + i * 65, Constants.PLAYER_COLORS[i], AssetLoader.font25, DrawString.BEGIN, false, false);
                 }
                 this.getMainPanel().drawString(s, Constants.GAME_WIDTH - AssetLoader.gameInfo.getRegionWidth() + 103, Constants.GAME_HEIGHT - AssetLoader.gameInfo.getRegionHeight() - 80 + i * 65, Constants.COLOR_WHITE, AssetLoader.font25, DrawString.BEGIN, false, false);
@@ -923,29 +1012,33 @@ public class Treasure extends SequentiallyThinkingScreenModel {
             this.showRules.render(this.getMainPanel());
         } else {
             s = this.curTask;
-            this.getMainPanel().drawString(s, Constants.GAME_WIDTH - AssetLoader.gameInfo.getRegionWidth()/2f - 10, Constants.GAME_HEIGHT - AssetLoader.gameInfo.getRegionHeight() - 135 - 60 + 10, Constants.COLOR_WHITE, AssetLoader.font15, DrawString.MIDDLE, false, false);
+            if (this.noActionTime >= NO_ACTION_MESSAGE_TIME && this.blink) {
+                this.getMainPanel().drawString(s, Constants.GAME_WIDTH - AssetLoader.gameInfo.getRegionWidth()/2f - 10, Constants.GAME_HEIGHT - AssetLoader.gameInfo.getRegionHeight() - 135 - 60 + 10, Constants.COLOR_RED, AssetLoader.font15, DrawString.MIDDLE, false, false);
+            } else {
+                this.getMainPanel().drawString(s, Constants.GAME_WIDTH - AssetLoader.gameInfo.getRegionWidth()/2f - 10, Constants.GAME_HEIGHT - AssetLoader.gameInfo.getRegionHeight() - 135 - 60 + 10, Constants.COLOR_WHITE, AssetLoader.font15, DrawString.MIDDLE, false, false);
+            }
         }
 
         if (this.currentStatus == Status.ASK) {
             this.getMainPanel().spriteBatch.draw(AssetLoader.gameHud, 10,10, Constants.GAME_WIDTH - 20, 80);
-            s = "Welcher Pirat soll befragt werden?";
+            s = Localization.get("hud.ask_which_pirate");
             this.getMainPanel().drawString(s, 50, 32, Constants.COLOR_WHITE, AssetLoader.font20, DrawString.BEGIN, false, false);
         } else if (this.currentStatus == Status.WON && this.showWon) {
             this.getMainPanel().spriteBatch.draw(AssetLoader.scrollWon, 10,10);
             this.getMainPanel().spriteBatch.draw(AssetLoader.treasure, 130,310, 450, 300);
 
-            s = "Herzlichen Glueckwunsch";
+            s = Localization.get("hud.congratulations");
             this.getMainPanel().drawString(s, 360, 130, Constants.COLOR_BLACK, AssetLoader.font25, DrawString.MIDDLE, false, false);
 
-            s =  "Pirat "+(this.currentPlayer + 1);
+            s = Localization.format("hud.pirate_won", this.wonPlayer);
             this.getMainPanel().drawString(s, 360, 160, Constants.COLOR_BLACK, AssetLoader.font25, DrawString.MIDDLE, false, false);
 
-            s = "Du hast den Schatz gefunden!";
+            s = Localization.get("hud.found_treasure");
             this.getMainPanel().drawString(s, 360, 240, Constants.COLOR_BLACK, AssetLoader.font25, DrawString.MIDDLE, false, false);
 
 
         } else {
-            if (this.information.getTime() > 0) {
+            if (!this.tutorial && this.information.getTime() > 0) {
                 this.information.render(this.getMainPanel());
             }
             if (this.moreInformation.getTime() > 0) {
@@ -966,7 +1059,7 @@ public class Treasure extends SequentiallyThinkingScreenModel {
             int height = 130;
             this.getMainPanel().spriteBatch.draw(AssetLoader.gameHud, Constants.GAME_WIDTH/2f - width/2f,Constants.GAME_HEIGHT/2f - height/2f, width, height);
 
-            s = "Zurueck zum Menu?";
+            s = Localization.get("hud.back_to_menu");
             this.getMainPanel().drawString(s, Constants.GAME_WIDTH/2f, Constants.GAME_HEIGHT/2f - 45, Constants.COLOR_WHITE, AssetLoader.font25, DrawString.MIDDLE, false, false);
         }
 

@@ -4,13 +4,14 @@ import com.apogames.pirate.Constants;
 import com.apogames.pirate.asset.AssetLoader;
 import com.apogames.pirate.backend.DrawString;
 import com.apogames.pirate.backend.SequentiallyThinkingScreenModel;
+import com.apogames.pirate.common.Localization;
 import com.apogames.pirate.entity.ApoButton;
-import com.apogames.pirate.entity.ApoButtonLanguage;
 import com.apogames.pirate.game.MainPanel;
 import com.apogames.pirate.game.treasure.ai.*;
 import com.badlogic.gdx.Gdx;
 
 import java.util.ArrayList;
+import java.util.Locale;
 
 public class Menu extends SequentiallyThinkingScreenModel {
 
@@ -25,13 +26,17 @@ public class Menu extends SequentiallyThinkingScreenModel {
 	public static final String FUNCTION_LEFT_SIZE = "leftSize";
 	public static final String FUNCTION_RIGHT_SIZE = "rightSize";
     public static final String FUNCTION_LANGUAGE = "menu_language";
+    public static final String FUNCTION_TUTORIAL = "menu_tutorial";
 
 	private static final int MAX_DIFFICULTY = 1;
 	private static final int MIN_DIFFICULTY = 0;
 
+	private static final int MAX_SIZE = 2;
+	private static final int MIN_SIZE = 0;
+
 	private int difficulty = MIN_DIFFICULTY;
 
-	private int size = MIN_DIFFICULTY;
+	private int size = MIN_SIZE;
 
 	private ArrayList<PiratePlayer> players;
 	private ArrayList<PiratePlayer> possiblePlayers;
@@ -56,11 +61,12 @@ public class Menu extends SequentiallyThinkingScreenModel {
 		getMainPanel().getButtonByFunction(FUNCTION_LEFT_SIZE).setVisible(true);
 		getMainPanel().getButtonByFunction(FUNCTION_RIGHT_SIZE).setVisible(true);
 		getMainPanel().getButtonByFunction(FUNCTION_PLAY).setVisible(true);
+		getMainPanel().getButtonByFunction(FUNCTION_TUTORIAL).setVisible(true);
+		getMainPanel().getButtonByFunction(FUNCTION_LANGUAGE).setVisible(true);
     }
     
     @Override
     public void init() {
-		ApoButtonLanguage language = (ApoButtonLanguage)(getMainPanel().getButtonByFunction(FUNCTION_LANGUAGE));
         if (getGameProperties() == null) {
         	setGameProperties(new MenuPreferences(this));
             loadProperties();
@@ -154,6 +160,8 @@ public class Menu extends SequentiallyThinkingScreenModel {
 			this.changeSize(1);
 		} else if (function.equals(FUNCTION_PLAY)) {
 			getMainPanel().changeToGame();
+		} else if (function.equals(Menu.FUNCTION_TUTORIAL)) {
+			getMainPanel().changeToTutorial();
 		}
     }
 
@@ -192,24 +200,42 @@ public class Menu extends SequentiallyThinkingScreenModel {
 
 	private void changeSize(int add) {
 		this.size += add;
-		if (this.size < MIN_DIFFICULTY) {
-			this.size = MAX_DIFFICULTY;
-		} else if (this.size > MAX_DIFFICULTY) {
-			this.size = MIN_DIFFICULTY;
+		if (this.size < MIN_SIZE) {
+			this.size = MAX_SIZE;
+		} else if (this.size > MAX_SIZE) {
+			this.size = MIN_SIZE;
 		}
 	}
 
 	private void changeLanguage() {
-		ApoButtonLanguage language = (ApoButtonLanguage)(getMainPanel().getButtonByFunction(FUNCTION_LANGUAGE));
-		language.changeText();
-		if (language.getText().equals(ApoButtonLanguage.FUNCTION_ENGLISH)) {
-			Constants.setLanguage("en");
+		Locale current = Localization.getInstance().getLocale();
+		if ("de".equals(current.getLanguage())) {
+			Localization.getInstance().setLocale(Locale.ENGLISH);
 		} else {
-			Constants.setLanguage("de");
+			Localization.getInstance().setLocale(Locale.GERMAN);
 		}
-		getGameProperties().writeLevel();
+		if (getGameProperties() != null) {
+			getGameProperties().writeLevel();
+		}
 	}
 
+
+    private static String difficultyKey(int difficulty) {
+        switch (difficulty) {
+            case 0: return "menu.difficulty.easy";
+            case 1: return "menu.difficulty.hard";
+            default: return "menu.difficulty.easy";
+        }
+    }
+
+    private static String sizeKey(int size) {
+        switch (size) {
+            case 0: return "menu.size.normal";
+            case 1: return "menu.size.big";
+            case 2: return "menu.size.gigantic";
+            default: return "menu.size.normal";
+        }
+    }
 
     @Override
     protected void quit() {
@@ -233,30 +259,31 @@ public class Menu extends SequentiallyThinkingScreenModel {
 
 		this.getMainPanel().spriteBatch.draw(AssetLoader.gameHud, 10, 225, Constants.GAME_WIDTH - 20, 155);
 
-		String s = Constants.PROGRAM_NAME;
+		String s = Localization.get("program_name");
 		this.getMainPanel().drawString(s, Constants.GAME_WIDTH / 2f, 65, Constants.COLOR_BLACK, AssetLoader.font30, DrawString.MIDDLE, false, false);
 
-		s = Constants.STRING_PLAYER;
+		s = Localization.get("menu.player");
 		this.getMainPanel().drawString(s, Constants.GAME_WIDTH / 2f + 5, 238, Constants.COLOR_WHITE, AssetLoader.font25, DrawString.MIDDLE, false, false);
 
 		for (int i = 0; i < this.players.size(); i++) {
-			s = "x";
 			if (this.players.get(i) != null) {
 				s = this.players.get(i).getName();
+			} else {
+				s = Localization.get("menu.player_empty");
 			}
 			this.getMainPanel().drawString(s, Constants.GAME_WIDTH * (0.1f + i * 0.2f), 275, Constants.COLOR_WHITE, AssetLoader.font20, DrawString.MIDDLE, false, false);
 		}
 
-		s = Constants.STRING_DIFFICULTY;
+		s = Localization.get("menu.difficulty");
 		this.getMainPanel().drawString(s, Constants.GAME_WIDTH / 2f + 5, 428, Constants.COLOR_WHITE, AssetLoader.font20, DrawString.MIDDLE, false, false);
 
-		s = Constants.STRING_DIFFICULTY_TEXT[this.difficulty];
+		s = Localization.get(difficultyKey(this.difficulty));
 		this.getMainPanel().drawString(s, Constants.GAME_WIDTH / 2f + 5, 485, Constants.COLOR_WHITE, AssetLoader.font25, DrawString.MIDDLE, false, false);
 
-		s = Constants.STRING_SIZE;
+		s = Localization.get("menu.size");
 		this.getMainPanel().drawString(s, Constants.GAME_WIDTH / 2f + 5, 550, Constants.COLOR_WHITE, AssetLoader.font25, DrawString.MIDDLE, false, false);
 
-		s = Constants.STRING_SIZE_TEXT[this.size];
+		s = Localization.get(sizeKey(this.size));
 		this.getMainPanel().drawString(s, Constants.GAME_WIDTH / 2f + 5, 610, Constants.COLOR_WHITE, AssetLoader.font25, DrawString.MIDDLE, false, false);
 
 		for (ApoButton button : this.getMainPanel().getButtons()) {

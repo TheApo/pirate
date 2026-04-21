@@ -13,19 +13,21 @@ public class LevelExtraObjectives {
 
     private Tile[][] level;
 
-    public LevelExtraObjectives(final Tile[][] level, boolean hard) {
+    public LevelExtraObjectives(final Tile[][] level, boolean hard, int size) {
         this.level = level;
 
-        this.fillWithExtra(hard);
+        this.fillWithExtra(hard, size);
     }
 
-    private void fillWithExtra(boolean hard) {
+    private void fillWithExtra(boolean hard, int size) {
         ArrayList<Integer> extras = new ArrayList<>();
         extras.add(0);
         extras.add(1);
         extras.add(2);
 
-        extras.remove((int)(Math.random() * extras.size()));
+        if (size <= 1) {
+            extras.remove((int)(Math.random() * extras.size()));
+        }
 
         ArrayList<Integer> colors = new ArrayList<>();
         for (int i = 0; i < 5; i++) {
@@ -49,28 +51,18 @@ public class LevelExtraObjectives {
             }
         }
 
-        ArrayList<Integer> deers = new ArrayList<>();
-        deers.add(3);
-        deers.add(3);
-        deers.add(2);
-
-        for (int deer = 0; deer < deers.size(); deer++) {
-            int x = (int) (Math.random() * this.level[0].length);
-            int y = (int) (Math.random() * this.level.length);
-            while (this.level[y][x] == null || this.level[y][x].getObjective() != null || this.level[y][x].getBackground() == Background.WATER) {
-                x = (int) (Math.random() * this.level[0].length);
-                y = (int) (Math.random() * this.level.length);
+        addAnimals(ExtraObjective.RED_PANDA, 3, 3, 2);
+        addAnimals(ExtraObjective.WHITE_SHEEP, 3, 2, 2);
+        if (size > 0) {
+            addAnimals(ExtraObjective.BEARS, 3, 3, 2);
+            if (size > 1) {
+                addAnimals(ExtraObjective.BLACK_SHEEP, 3, 2, 2);
             }
-            boolean[][] visited = new boolean[this.level.length][this.level[0].length];
-            fillTile(x, y, ExtraObjective.RED_PANDA, visited, deers.get(deer));
         }
+    }
 
-        ArrayList<Integer> bears = new ArrayList<>();
-        bears.add(3);
-        bears.add(2);
-        bears.add(2);
-
-        for (int bear = 0; bear < bears.size(); bear++) {
+    private void addAnimals(ExtraObjective extraObjective, int... groupSizes) {
+        for (int groupSize : groupSizes) {
             int x = (int) (Math.random() * this.level[0].length);
             int y = (int) (Math.random() * this.level.length);
             while (this.level[y][x] == null || this.level[y][x].getObjective() != null || this.level[y][x].getBackground() == Background.WATER) {
@@ -78,7 +70,7 @@ public class LevelExtraObjectives {
                 y = (int) (Math.random() * this.level.length);
             }
             boolean[][] visited = new boolean[this.level.length][this.level[0].length];
-            fillTile(x, y, ExtraObjective.BEARS, visited, bears.get(bear));
+            fillTile(x, y, extraObjective, visited, groupSize);
         }
     }
 

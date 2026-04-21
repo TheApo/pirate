@@ -6,8 +6,10 @@ public enum ExtraObjective {
     SWORDS(0),
     STAR(1),
 
-    BEARS(2),
-    RED_PANDA(3);
+    BEARS(1),
+    RED_PANDA(0),
+    WHITE_SHEEP(2),
+    BLACK_SHEEP(3);
 
     private final int assetNumber;
 

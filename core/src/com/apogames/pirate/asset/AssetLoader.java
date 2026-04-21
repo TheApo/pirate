@@ -68,6 +68,9 @@ public class AssetLoader {
 	private static Texture treasureButtonTexture;
 	public static TextureRegion[] treasureButton;
 
+	private static Texture tutorialButtonTexture;
+	public static TextureRegion[] tutorialButton;
+
 	private static Texture playAgainButtonTexture;
 	public static TextureRegion[] playAgainButton;
 
@@ -77,8 +80,13 @@ public class AssetLoader {
 	private static Texture tilesTexture;
 	public static TextureRegion[] tiles;
 
+	public static TextureRegion arrow;
+
 	private static Texture objectivesTexture;
 	public static TextureRegion[][] objectives;
+
+	private static Texture animalsTexture;
+	public static TextureRegion[][] animals;
 
 	private static Texture[] playerButtonTexture;
 	public static TextureRegion[][] playerButton;
@@ -201,6 +209,15 @@ public class AssetLoader {
 			treasureButton[x].flip(false, true);
 		}
 
+		tutorialButtonTexture = new Texture(Gdx.files.internal("pirate/button_tutorial.png"));
+		tutorialButtonTexture.setFilter(TextureFilter.Linear, TextureFilter.Nearest);
+
+		tutorialButton = new TextureRegion[3];
+		for (int x = 0; x < tutorialButton.length; x++) {
+			tutorialButton[x] = new TextureRegion(tutorialButtonTexture, x * 562, 0, 562, 554);
+			tutorialButton[x].flip(false, true);
+		}
+
 		playAgainButtonTexture = new Texture(Gdx.files.internal("pirate/button_playAgain.png"));
 		playAgainButtonTexture.setFilter(TextureFilter.Linear, TextureFilter.Nearest);
 
@@ -235,6 +252,9 @@ public class AssetLoader {
 				objectives[y][x].flip(false, true);
 			}
 		}
+
+		arrow = new TextureRegion(objectivesTexture, 982, 0, 42, 42);
+		arrow.flip(false, true);
 
 		playerButtonTexture = new Texture[5];
 		playerButtonTexture[0] = new Texture(Gdx.files.internal("pirate/button_player_one.png"));
@@ -313,6 +333,22 @@ public class AssetLoader {
 		mouseCursor = new TextureRegion(mouseCursorTexture, 0, 0, 493, 691);
 		mouseCursor.flip(false, true);
 
+		animalsTexture = new Texture(Gdx.files.internal("animals.png"));
+		animalsTexture.setFilter(TextureFilter.Linear, TextureFilter.Nearest);
+
+		animals = new TextureRegion[4][4];
+		for (int x = 0; x < animals[0].length; x++) {
+			animals[0][x] = new TextureRegion(animalsTexture, x * 60, 0, 60, 50);
+			animals[0][x].flip(false, true);
+			animals[1][x] = new TextureRegion(animalsTexture, x * 50, 50, 50, 50);
+			animals[1][x].flip(false, true);
+			int mirrored = 3 - x;
+			animals[2][mirrored] = new TextureRegion(animalsTexture, x * 64, 100, 64, 64);
+			animals[2][mirrored].flip(false, true);
+			animals[3][mirrored] = new TextureRegion(animalsTexture, x * 64, 164, 64, 64);
+			animals[3][mirrored].flip(false, true);
+		}
+
 		font40 = new BitmapFont(Gdx.files.internal("pirate/fonts/pirate40.fnt"), Gdx.files.internal("pirate/fonts/pirate40.png"), true);
 		font20 = new BitmapFont(Gdx.files.internal("pirate/fonts/pirate20.fnt"), Gdx.files.internal("pirate/fonts/pirate20.png"), true);
 		font15 = new BitmapFont(Gdx.files.internal("pirate/fonts/pirate15.fnt"), Gdx.files.internal("pirate/fonts/pirate15.png"), true);
@@ -331,6 +367,7 @@ public class AssetLoader {
 		helpButtonTexture.dispose();
 		ruleButtonTexture.dispose();
 		treasureButtonTexture.dispose();
+		tutorialButtonTexture.dispose();
 		playAgainButtonTexture.dispose();
 		gameTitleTexture.dispose();
 		gameInfoTexture.dispose();
@@ -344,6 +381,7 @@ public class AssetLoader {
 		starTexture.dispose();
 		treasureTexture.dispose();
 		mouseCursorTexture.dispose();
+		animalsTexture.dispose();
 		for (Texture texture : playerButtonTexture) {
 			texture.dispose();
 		}
