@@ -54,6 +54,7 @@ public class Treasure extends SequentiallyThinkingScreenModel {
     public static final String FUNCTION_RULES_RIGHT = "rules_right";
     public static final String FUNCTION_PLAY_AGAIN = "play_again";
     public static final String FUNCTION_NEXT_PLAYER = "next_player";
+    public static final String FUNCTION_GAMELOG = "gamelog";
 
     private final boolean[] keys = new boolean[256];
 
@@ -85,6 +86,32 @@ public class Treasure extends SequentiallyThinkingScreenModel {
     private boolean showHelp = false;
     private boolean showSolution = false;
     private boolean showCoords = false;
+    private boolean showGameLog = false;
+
+    private final ArrayList<GameLogEntry> gameLog = new ArrayList<>();
+    private int hoveredLogIndex = -1;
+    private int selectedLogIndex = -1;
+    private int logScrollOffset = 0;
+    private boolean draggingLog = false;
+    private float logDragAccum = 0f;
+    private int logPressY = -1;
+    private int lastMouseX = 0;
+    private int lastMouseY = 0;
+    private int currentRound = 1;
+    private int mapPressStartX = -1;
+    private int mapPressStartY = -1;
+    private static final int DESELECT_CLICK_THRESHOLD_PX = 5;
+
+    private static final int LOG_PANEL_X = 10;
+    private static final int LOG_PANEL_Y = 80;
+    private static final int LOG_PANEL_WIDTH = 566;
+    private static final int LOG_PANEL_HEIGHT = 550;
+    private static final int LOG_CONTENT_TOP_PADDING = 15;
+    private static final int LOG_TEXT_X_OFFSET = 55;
+    private static final int LOG_LINE_HEIGHT = 30;
+    private static final int LOG_HEADER_HEIGHT = 55;
+    private static final int LOG_BOTTOM_PADDING = 40;
+    private static final int LOG_MAX_LINES = (LOG_PANEL_HEIGHT - LOG_HEADER_HEIGHT - LOG_BOTTOM_PADDING) / LOG_LINE_HEIGHT;
 
     private int noActionTime = 0;
     private int blinkTime = 0;
@@ -237,6 +264,7 @@ public class Treasure extends SequentiallyThinkingScreenModel {
         getMainPanel().getButtonByFunction(FUNCTION_HELP).setVisible(true);
         getMainPanel().getButtonByFunction(FUNCTION_TREASURE).setVisible(true);
         getMainPanel().getButtonByFunction(FUNCTION_RULES).setVisible(true);
+        getMainPanel().getButtonByFunction(FUNCTION_GAMELOG).setVisible(true);
         getMainPanel().getButtonByFunction(FUNCTION_PLAY_AGAIN).setVisible(false);
         getMainPanel().getButtonByFunction(FUNCTION_NEXT_PLAYER).setVisible(false);
         showAskButtons(false);
@@ -382,11 +410,17 @@ public class Treasure extends SequentiallyThinkingScreenModel {
         this.level = createLevel.getLevel();
         this.countRules = 0;
         this.currentPlayer = 0;
+        this.currentRound = 1;
+        this.gameLog.clear();
+        this.hoveredLogIndex = -1;
+        this.selectedLogIndex = -1;
+        this.logScrollOffset = 0;
         this.newRules();
         this.setInformationForStatus();
     }
 
     private void nextPlayer(int add) {
+        int prev = this.currentPlayer;
         this.currentPlayer += add;
         if (this.currentPlayer < 0) {
             this.currentPlayer = this.rules.length - 1;
@@ -394,6 +428,9 @@ public class Treasure extends SequentiallyThinkingScreenModel {
             this.currentPlayer = 0;
         }
         if (this.currentStatus != Status.WON) {
+            if (add > 0 && this.currentPlayer < prev) {
+                this.currentRound += 1;
+            }
             this.setStatus(Status.SET_QUESTION);
             this.setInformationForStatus();
             if (this.rules[this.currentPlayer].isOut()) {
@@ -403,6 +440,8 @@ public class Treasure extends SequentiallyThinkingScreenModel {
     }
 
     public void mouseMoved(int mouseX, int mouseY) {
+        this.lastMouseX = mouseX;
+        this.lastMouseY = mouseY;
         if (this.currentStatus != Status.ASK) {
             Vector2 mousePosition = getMousePosition(mouseX, mouseY);
             if (mousePosition != null) {
@@ -413,6 +452,56 @@ public class Treasure extends SequentiallyThinkingScreenModel {
                 this.curOverLevelY = -1;
             }
         }
+        updateHoveredLogIndex(mouseX, mouseY);
+    }
+
+    private boolean isInsideLogPanel(int x, int y) {
+        return this.showGameLog
+                && x >= LOG_PANEL_X && x <= LOG_PANEL_X + LOG_PANEL_WIDTH
+                && y >= LOG_PANEL_Y && y <= LOG_PANEL_Y + LOG_PANEL_HEIGHT;
+    }
+
+    private int clampScrollOffset(int off) {
+        int max = Math.max(0, this.gameLog.size() - 1);
+        if (off < 0) return 0;
+        if (off > max) return max;
+        return off;
+    }
+
+    private void addLogEntry(GameLogEntry entry) {
+        int rowCountBefore = buildLogRows().size();
+        boolean wasAtEnd = this.logScrollOffset + LOG_MAX_LINES >= rowCountBefore;
+        this.gameLog.add(entry);
+        if (wasAtEnd) {
+            int rowCountAfter = buildLogRows().size();
+            this.logScrollOffset = Math.max(0, rowCountAfter - LOG_MAX_LINES);
+        }
+    }
+
+    private void updateHoveredLogIndex(int mouseX, int mouseY) {
+        this.hoveredLogIndex = entryIndexAt(mouseX, mouseY);
+    }
+
+    private int entryIndexAt(int mouseX, int mouseY) {
+        if (!this.showGameLog || this.gameLog.isEmpty()) {
+            return -1;
+        }
+        if (mouseX < LOG_PANEL_X || mouseX > LOG_PANEL_X + LOG_PANEL_WIDTH) {
+            return -1;
+        }
+        int listTop = LOG_PANEL_Y + LOG_HEADER_HEIGHT;
+        int listBottom = listTop + LOG_MAX_LINES * LOG_LINE_HEIGHT;
+        if (mouseY < listTop || mouseY > listBottom) {
+            return -1;
+        }
+        ArrayList<LogRow> rows = buildLogRows();
+        int visibleRow = (mouseY - listTop) / LOG_LINE_HEIGHT;
+        int rowIndex = this.logScrollOffset + visibleRow;
+        if (rowIndex < 0 || rowIndex >= rows.size()) {
+            return -1;
+        }
+        LogRow r = rows.get(rowIndex);
+        return r.header ? -1 : r.entryIndex;
     }
 
     public void mouseButtonReleasedTutorial() {
@@ -426,9 +515,36 @@ public class Treasure extends SequentiallyThinkingScreenModel {
         this.noActionTime = 0;
         this.isPressed = false;
         boolean curDragged = this.dragged;
+        boolean wasLogDrag = this.draggingLog;
+        int pressY = this.logPressY;
+        int mapStartX = this.mapPressStartX;
+        int mapStartY = this.mapPressStartY;
         this.dragged = false;
+        this.draggingLog = false;
+        this.logDragAccum = 0f;
+        this.logPressY = -1;
+        this.mapPressStartX = -1;
+        this.mapPressStartY = -1;
         this.oldMouseX = -1;
         this.oldMouseY = -1;
+
+        if (wasLogDrag) {
+            if (isInsideLogPanel(mouseX, mouseY) && Math.abs(mouseY - pressY) < LOG_LINE_HEIGHT / 2) {
+                int tapped = entryIndexAt(mouseX, mouseY);
+                if (tapped >= 0) {
+                    this.selectedLogIndex = (this.selectedLogIndex == tapped) ? -1 : tapped;
+                }
+            }
+            return;
+        }
+
+        if (mapStartX >= 0 && mapStartY >= 0 && this.selectedLogIndex >= 0) {
+            int dx = mouseX - mapStartX;
+            int dy = mouseY - mapStartY;
+            if (dx * dx + dy * dy < DESELECT_CLICK_THRESHOLD_PX * DESELECT_CLICK_THRESHOLD_PX) {
+                this.selectedLogIndex = -1;
+            }
+        }
 
         if (this.currentStatus == Status.WON && !isRightButton) {
             this.showWon = !this.showWon;
@@ -470,6 +586,7 @@ public class Treasure extends SequentiallyThinkingScreenModel {
                             !this.level[this.curPickLevelY][this.curPickLevelX].hasIncorrectGuess() &&
                             !this.rules[this.currentPlayer].getSolution(this.level)[this.curPickLevelY][this.curPickLevelX]) {
                         this.level[this.curPickLevelY][this.curPickLevelX].getIncorrectGuesses()[this.currentPlayer] = true;
+                        this.addLogEntry(new GameLogEntry(GameLogEntry.Type.PLACE_NOT, this.currentPlayer, -1, this.curPickLevelX, this.curPickLevelY, this.currentRound));
                         setMoreInformation(Status.ASK);
                         this.nextPlayer(1);
                     } else {
@@ -506,6 +623,9 @@ public class Treasure extends SequentiallyThinkingScreenModel {
                 this.level[y][x].getCorrectGuesses()[i] = true;
             }
         }
+        this.addLogEntry(new GameLogEntry(
+                win ? GameLogEntry.Type.TREASURE_FOUND : GameLogEntry.Type.TREASURE_WRONG,
+                this.currentPlayer, -1, x, y, this.currentRound));
         if (win) {
             getMainPanel().getButtonByFunction(FUNCTION_RULES).setVisible(false);
             getMainPanel().getButtonByFunction(FUNCTION_TREASURE).setVisible(false);
@@ -539,6 +659,17 @@ public class Treasure extends SequentiallyThinkingScreenModel {
     public void mousePressed(int x, int y, boolean isRightButton) {
         this.noActionTime = 0;
         this.mouseMoved(x, y);
+        if (isInsideLogPanel(x, y)) {
+            this.draggingLog = true;
+            this.logDragAccum = 0f;
+            this.logPressY = y;
+            this.isPressed = true;
+            this.oldMouseX = x;
+            this.oldMouseY = y;
+            return;
+        }
+        this.mapPressStartX = x;
+        this.mapPressStartY = y;
         if (((isRightButton || !this.dragged) && !this.isPressed) || this.oldMouseX < 0) {
             this.isPressed = true;
             this.oldMouseX = x;
@@ -552,6 +683,18 @@ public class Treasure extends SequentiallyThinkingScreenModel {
         }
         int deltaX = x - this.oldMouseX;
         int deltaY = y - this.oldMouseY;
+
+        if (this.draggingLog) {
+            this.logDragAccum += deltaY;
+            int lineSteps = (int)(this.logDragAccum / LOG_LINE_HEIGHT);
+            if (lineSteps != 0) {
+                this.logScrollOffset = clampRowOffset(this.logScrollOffset - lineSteps, buildLogRows().size());
+                this.logDragAccum -= lineSteps * LOG_LINE_HEIGHT;
+            }
+            this.oldMouseX = x;
+            this.oldMouseY = y;
+            return;
+        }
 
         this.setChangeXAndY(deltaX, deltaY);
         this.oldMouseX = x;
@@ -681,6 +824,18 @@ public class Treasure extends SequentiallyThinkingScreenModel {
             case Treasure.FUNCTION_NEXT_PLAYER:
                 this.nextPlayer(1);
                 break;
+            case Treasure.FUNCTION_GAMELOG:
+                this.showGameLog = !this.showGameLog;
+                if (this.showGameLog) {
+                    int rowCount = buildLogRows().size();
+                    this.logScrollOffset = Math.max(0, rowCount - LOG_MAX_LINES);
+                } else {
+                    this.hoveredLogIndex = -1;
+                    this.selectedLogIndex = -1;
+                    this.draggingLog = false;
+                    this.logDragAccum = 0f;
+                }
+                break;
         }
     }
 
@@ -695,7 +850,11 @@ public class Treasure extends SequentiallyThinkingScreenModel {
     private void checkPlayerAndSet(int player) {
         this.showAskButtons(false);
         this.setStatus(Status.SET_QUESTION);
-        if (!this.rules[player].getSolution(this.level)[this.curPickLevelY][this.curPickLevelX]) {
+        boolean askYes = this.rules[player].getSolution(this.level)[this.curPickLevelY][this.curPickLevelX];
+        this.addLogEntry(new GameLogEntry(
+                askYes ? GameLogEntry.Type.ASK_YES : GameLogEntry.Type.ASK_NO,
+                this.currentPlayer, player, this.curPickLevelX, this.curPickLevelY, this.currentRound));
+        if (!askYes) {
             this.setStatus(Status.SET_NOT);
             getMainPanel().getButtonByFunction(FUNCTION_TREASURE).setVisible(false);
             this.level[this.curPickLevelY][this.curPickLevelX].getIncorrectGuesses()[player] = true;
@@ -819,6 +978,10 @@ public class Treasure extends SequentiallyThinkingScreenModel {
     }
 
     public void mouseWheelChanged(int changed) {
+        if (isInsideLogPanel(this.lastMouseX, this.lastMouseY)) {
+            this.logScrollOffset = clampRowOffset(this.logScrollOffset + changed, buildLogRows().size());
+            return;
+        }
         float oldTileSize = Constants.TILE_SIZE[this.curTileSize];
         this.curTileSize -= changed;
         if (this.curTileSize < 0) {
@@ -877,6 +1040,7 @@ public class Treasure extends SequentiallyThinkingScreenModel {
                 } else if (this.currentStatus == Status.SET_NOT) {
                     if (this.level[this.curPickLevelY][this.curPickLevelX] != null) {
                         this.level[this.curPickLevelY][this.curPickLevelX].getIncorrectGuesses()[this.currentPlayer] = true;
+                        this.addLogEntry(new GameLogEntry(GameLogEntry.Type.PLACE_NOT, this.currentPlayer, -1, this.curPickLevelX, this.curPickLevelY, this.currentRound));
                     }
                     this.setMoreInformation(Status.ASK);
                     this.nextPlayer(1);
@@ -1059,6 +1223,13 @@ public class Treasure extends SequentiallyThinkingScreenModel {
             int changeY = this.changeY + (int)(this.curOverLevelY * tileSize * 295f/256f * 0.75f);
             getMainPanel().spriteBatch.draw(AssetLoader.tilesOverlay[5], changeX, changeY, tileSize, 295f / 256f * tileSize);
         }
+        int logHighlight = (this.hoveredLogIndex >= 0) ? this.hoveredLogIndex : this.selectedLogIndex;
+        if (this.showGameLog && logHighlight >= 0 && logHighlight < this.gameLog.size()) {
+            GameLogEntry entry = this.gameLog.get(logHighlight);
+            int changeX = this.changeX + entry.getTileX() * tileSize + entry.getTileY() * tileSize / 2;
+            int changeY = this.changeY + (int)(entry.getTileY() * tileSize * 295f/256f * 0.75f);
+            getMainPanel().spriteBatch.draw(AssetLoader.tilesOverlay[5], changeX, changeY, tileSize, 295f / 256f * tileSize);
+        }
 
         int bottomHudWidth = 735;
         int bottomHudX = (Constants.GAME_WIDTH - bottomHudWidth) / 2;
@@ -1156,6 +1327,8 @@ public class Treasure extends SequentiallyThinkingScreenModel {
             button.render(this.getMainPanel(), 0, 0, false);
         }
 
+        renderGameLog();
+
 		getMainPanel().spriteBatch.end();
 
         if (!this.showRules.isVisible()) {
@@ -1178,7 +1351,148 @@ public class Treasure extends SequentiallyThinkingScreenModel {
             }
         }
 
+        renderLogHighlightOutline(tileSize);
         renderCurrentPlayerBorder();
+    }
+
+    private static final int LOG_HIGHLIGHT_OUTLINE_WIDTH = 6;
+
+    private void renderLogHighlightOutline(int tileSize) {
+        if (!this.showGameLog) {
+            return;
+        }
+        int idx = (this.hoveredLogIndex >= 0) ? this.hoveredLogIndex : this.selectedLogIndex;
+        if (idx < 0 || idx >= this.gameLog.size()) {
+            return;
+        }
+        GameLogEntry entry = this.gameLog.get(idx);
+        int ox = this.changeX + entry.getTileX() * tileSize + entry.getTileY() * tileSize / 2;
+        int oy = this.changeY + (int)(entry.getTileY() * tileSize * 295f / 256f * 0.75f);
+        float h = 295f / 256f * tileSize;
+        float half = tileSize / 2f;
+        float[] vx = {ox + half, ox + tileSize, ox + tileSize, ox + half, ox,          ox};
+        float[] vy = {oy,        oy + 0.25f * h, oy + 0.75f * h, oy + h,   oy + 0.75f * h, oy + 0.25f * h};
+        getMainPanel().getRenderer().begin(ShapeRenderer.ShapeType.Filled);
+        getMainPanel().getRenderer().setColor(Constants.COLOR_YELLOW[0], Constants.COLOR_YELLOW[1], Constants.COLOR_YELLOW[2], 1f);
+        for (int i = 0; i < vx.length; i++) {
+            int j = (i + 1) % vx.length;
+            getMainPanel().getRenderer().rectLine(vx[i], vy[i], vx[j], vy[j], LOG_HIGHLIGHT_OUTLINE_WIDTH);
+        }
+        getMainPanel().getRenderer().end();
+    }
+
+    /** Virtual row in the log panel: either a round header or a log entry. */
+    private static class LogRow {
+        final boolean header;
+        final int round;
+        final int entryIndex;
+        LogRow(boolean header, int round, int entryIndex) {
+            this.header = header;
+            this.round = round;
+            this.entryIndex = entryIndex;
+        }
+    }
+
+    private ArrayList<LogRow> buildLogRows() {
+        ArrayList<LogRow> rows = new ArrayList<>();
+        int lastRound = -1;
+        for (int i = 0; i < this.gameLog.size(); i++) {
+            GameLogEntry e = this.gameLog.get(i);
+            if (e.getRound() != lastRound) {
+                rows.add(new LogRow(true, e.getRound(), -1));
+                lastRound = e.getRound();
+            }
+            rows.add(new LogRow(false, e.getRound(), i));
+        }
+        return rows;
+    }
+
+    private int clampRowOffset(int off, int rowCount) {
+        int max = Math.max(0, rowCount - 1);
+        if (off < 0) return 0;
+        if (off > max) return max;
+        return off;
+    }
+
+    private void renderGameLog() {
+        if (!this.showGameLog) {
+            return;
+        }
+        getMainPanel().spriteBatch.draw(AssetLoader.gameInfo, LOG_PANEL_X, LOG_PANEL_Y, LOG_PANEL_WIDTH, LOG_PANEL_HEIGHT);
+
+        ArrayList<LogRow> rows = buildLogRows();
+        String title = Localization.get("log.title");
+        if (rows.size() > LOG_MAX_LINES) {
+            title += "  (" + (this.logScrollOffset + 1) + "-"
+                    + Math.min(rows.size(), this.logScrollOffset + LOG_MAX_LINES) + ")";
+        }
+        getMainPanel().drawString(title, LOG_PANEL_X + LOG_PANEL_WIDTH / 2f, LOG_PANEL_Y + 8 + LOG_CONTENT_TOP_PADDING, Constants.COLOR_WHITE, AssetLoader.font25, DrawString.MIDDLE, false, false);
+
+        int start = clampRowOffset(this.logScrollOffset, rows.size());
+        this.logScrollOffset = start;
+        int end = Math.min(rows.size(), start + LOG_MAX_LINES);
+        int listTop = LOG_PANEL_Y + LOG_HEADER_HEIGHT;
+        int highlightIndex = (this.hoveredLogIndex >= 0) ? this.hoveredLogIndex : this.selectedLogIndex;
+        for (int i = start; i < end; i++) {
+            LogRow row = rows.get(i);
+            int lineY = listTop + (i - start) * LOG_LINE_HEIGHT;
+            if (row.header) {
+                String headerText = Localization.format("log.round", row.round);
+                getMainPanel().drawString(headerText, LOG_PANEL_X + LOG_PANEL_WIDTH / 2f, lineY, Constants.COLOR_YELLOW, AssetLoader.font20, DrawString.MIDDLE, false, false);
+            } else {
+                GameLogEntry entry = this.gameLog.get(row.entryIndex);
+                boolean marked = (row.entryIndex == highlightIndex);
+                float xStart = LOG_PANEL_X + LOG_TEXT_X_OFFSET + (marked ? 4f : 0f);
+                if (marked) {
+                    getMainPanel().drawString(">", LOG_PANEL_X + LOG_TEXT_X_OFFSET - 18, lineY, Constants.COLOR_WHITE, AssetLoader.font20, DrawString.BEGIN, false, false);
+                }
+                drawLogEntryLine(entry, xStart, lineY);
+            }
+        }
+    }
+
+    private float[] playerColor(int player) {
+        if (player < 0 || player >= Constants.PLAYER_COLORS.length) {
+            return Constants.COLOR_WHITE;
+        }
+        return Constants.PLAYER_COLORS[player];
+    }
+
+    /** Draws {@code text} in the given color and returns the pixel width drawn. */
+    private float drawLogSegment(String text, float x, float y, float[] color) {
+        Constants.glyphLayout.setText(AssetLoader.font20, text);
+        getMainPanel().drawString(text, x, y, color, AssetLoader.font20, DrawString.BEGIN, false, false);
+        return Constants.glyphLayout.width;
+    }
+
+    private void drawLogEntryLine(GameLogEntry entry, float x, float y) {
+        float[] actorColor = playerColor(entry.getActorPlayer());
+        x += drawLogSegment("P" + (entry.getActorPlayer() + 1) + " ", x, y, actorColor);
+
+        int tx = entry.getTileX();
+        int ty = entry.getTileY();
+        switch (entry.getType()) {
+            case ASK_YES:
+            case ASK_NO: {
+                float[] targetColor = playerColor(entry.getTargetPlayer());
+                x += drawLogSegment(Localization.get("log.ask.verb") + " ", x, y, Constants.COLOR_WHITE);
+                x += drawLogSegment("P" + (entry.getTargetPlayer() + 1) + " ", x, y, targetColor);
+                String tailKey = (entry.getType() == GameLogEntry.Type.ASK_YES) ? "log.ask_yes.tail" : "log.ask_no.tail";
+                drawLogSegment(Localization.format(tailKey, tx, ty), x, y, Constants.COLOR_WHITE);
+                break;
+            }
+            case PLACE_NOT:
+                drawLogSegment(Localization.format("log.place_not", tx, ty), x, y, Constants.COLOR_WHITE);
+                break;
+            case TREASURE_FOUND:
+                drawLogSegment(Localization.format("log.treasure_found", tx, ty), x, y, Constants.COLOR_WHITE);
+                break;
+            case TREASURE_WRONG:
+                drawLogSegment(Localization.format("log.treasure_wrong", tx, ty), x, y, Constants.COLOR_WHITE);
+                break;
+            default:
+                break;
+        }
     }
 
     private static final int PLAYER_BORDER_WIDTH = 6;

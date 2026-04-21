@@ -32,6 +32,7 @@ import com.apogames.pirate.asset.AssetLoader;
 import com.apogames.pirate.entity.ApoButton;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Input;
+import com.badlogic.gdx.InputMultiplexer;
 import com.badlogic.gdx.InputProcessor;
 import com.badlogic.gdx.Screen;
 import com.badlogic.gdx.graphics.GL20;
@@ -39,6 +40,7 @@ import com.badlogic.gdx.graphics.OrthographicCamera;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.GlyphLayout;
 import com.badlogic.gdx.graphics.g2d.SpriteBatch;
+import com.badlogic.gdx.input.GestureDetector;
 import com.badlogic.gdx.math.GridPoint2;
 import com.badlogic.gdx.math.Vector3;
 import com.badlogic.gdx.utils.viewport.FitViewport;
@@ -95,10 +97,42 @@ public class GameScreen implements Screen, InputProcessor {
             viewport.update(lastViewPortResizeWidth, lastViewPortResizeHeight);
         }
 
-        Gdx.input.setInputProcessor(this);
+        InputMultiplexer multiplexer = new InputMultiplexer();
+        multiplexer.addProcessor(new GestureDetector(new PinchZoomListener()));
+        multiplexer.addProcessor(this);
+        Gdx.input.setInputProcessor(multiplexer);
         Gdx.input.setCatchKey(Input.Keys.BACK, true);
 
         this.buttons = new ArrayList<ApoButton>();
+    }
+
+    /**
+     * Gesture listener that forwards pinch zoom to the model as throttled
+     * mouse-wheel steps. One step per {@link #PINCH_STEP_PIXELS} pixels of
+     * distance change, so zoom is intentionally slow on touch devices.
+     */
+    private class PinchZoomListener extends GestureDetector.GestureAdapter {
+        private static final float PINCH_STEP_PIXELS = 120f;
+
+        private float lastInitial = -1f;
+        private float base = 0f;
+
+        @Override
+        public boolean zoom(float initialDistance, float distance) {
+            if (this.lastInitial != initialDistance) {
+                this.lastInitial = initialDistance;
+                this.base = initialDistance;
+            }
+            float diff = distance - this.base;
+            if (Math.abs(diff) >= PINCH_STEP_PIXELS) {
+                int step = (int)(diff / PINCH_STEP_PIXELS);
+                if (model != null) {
+                    model.mouseWheelChanged(-step);
+                }
+                this.base += step * PINCH_STEP_PIXELS;
+            }
+            return true;
+        }
     }
 
     /**
@@ -357,6 +391,9 @@ public class GameScreen implements Screen, InputProcessor {
     }
 
     public boolean touchUp(int screenX, int screenY, int pointer, int button) {
+        if (pointer != 0) {
+            return false;
+        }
         Game.markDirty();
         Vector3 screenCoords = new Vector3(screenX, screenY, 0);
         viewport.unproject(screenCoords);
@@ -388,15 +425,14 @@ public class GameScreen implements Screen, InputProcessor {
     }
 
     public boolean touchDragged(int screenX, int screenY, int pointer) {
+        if (pointer != 0 || Gdx.input.isTouched(1)) {
+            return false;
+        }
         Game.markDirty();
         Vector3 screenCoords = new Vector3(screenX, screenY, 0);
         viewport.unproject(screenCoords);
         int x = (int) screenCoords.x;
         int y = (int) screenCoords.y;
-        // Only forward drags that started on the model. If the initial touchDown
-        // was absorbed by a UI button, the model never saw a mousePressed, so we
-        // must not fabricate a drag for it — otherwise oldMouseX gets stuck at
-        // the button position and the next real click produces a huge delta.
         if (this.model != null && this.pressedOnModel) {
             this.clickDraggedArray.add(new GridPoint2(x, y));
         }
@@ -404,6 +440,9 @@ public class GameScreen implements Screen, InputProcessor {
     }
 
     public boolean touchDown(int screenX, int screenY, int pointer, int button) {
+        if (pointer != 0) {
+            return false;
+        }
         Game.markDirty();
         Vector3 screenCoords = new Vector3(screenX, screenY, 0);
         viewport.unproject(screenCoords);
