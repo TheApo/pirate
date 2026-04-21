@@ -1,5 +1,9 @@
+i:b:/animals.png:46696:1
 i:b:/background.png:498318:1
-i:b:/extraTiles_256_295.png:134985:1
+i:b:/extraTiles_256_295.png:187372:1
+i:b:/i18n/pirate.properties:6422:1
+i:b:/i18n/pirate_de.properties:7252:1
+i:b:/i18n/pirate_en.properties:6422:1
 i:b:/mirror.png:20922:1
 i:b:/pirate/button_left.png:84511:1
 i:b:/pirate/button_play.png:57582:1
@@ -14,6 +18,7 @@ i:b:/pirate/button_right.png:84759:1
 i:b:/pirate/button_showHint.png:79508:1
 i:b:/pirate/button_showRules.png:81717:1
 i:b:/pirate/button_treasure.png:93077:1
+i:b:/pirate/button_tutorial.png:253303:1
 i:b:/pirate/button_yes.png:44468:1
 i:b:/pirate/cursor.png:20958:1
 i:b:/pirate/fonts/pirate10.fnt:30355:1
