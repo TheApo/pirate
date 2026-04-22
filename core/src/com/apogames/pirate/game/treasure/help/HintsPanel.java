@@ -36,20 +36,19 @@ public class HintsPanel extends ScrollablePanel {
     }
 
     /**
-     * Rebuilds the row list for the current game state. Does nothing if the
-     * active player is not human (rows become empty — caller typically hides
-     * the button in that case).
+     * Rebuilds the row list for the current game state. Shows every opponent
+     * except the active player. The caller decides when offering this panel
+     * is appropriate (e.g. only on a human's turn, or after the game is won
+     * for a post-mortem review).
      */
     public void rebuild(Tile[][] level, Rule[] rules, PiratePlayer[] players,
                         Rule[] allPossibleRules, int currentPlayer, int playerCount) {
         rows = new ArrayList<>();
         if (level == null || rules == null || players == null) return;
-        if (currentPlayer < 0 || currentPlayer >= players.length) return;
-        if (players[currentPlayer] == null || !players[currentPlayer].isHuman()) return;
 
         for (int i = 0; i < playerCount; i++) {
             if (i == currentPlayer) continue;
-            if (i >= rules.length || rules[i] == null || rules[i].isOut()) continue;
+            if (i >= rules.length || rules[i] == null) continue;
 
             rows.add(HintRow.header(i, Localization.format("hint.player_header", i + 1)));
             int n = 1;

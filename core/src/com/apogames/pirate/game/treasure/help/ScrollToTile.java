@@ -67,24 +67,25 @@ public class ScrollToTile {
             this.scrollMouse = false;
         }
         if (this.goalX >= 0) {
-            int tileSize = Constants.TILE_SIZE[this.treasure.getCurTileSize()];
-            int changeX = this.treasure.getChangeX() + this.goalX * tileSize + this.goalY * tileSize / 2;
-            int changeY = this.treasure.getChangeY() + (int) (this.goalY * tileSize * 295f / 256f * 0.75f);
+            LevelView view = this.treasure.getView();
+            int tileSize = view.tileSize();
+            int changeX = view.tileScreenX(this.goalX, this.goalY);
+            int changeY = view.tileScreenY(this.goalY);
             if (!this.scrollMouse) {
                 final int value = 2;
                 boolean changed = false;
                 if (changeX < 10) {
-                    this.treasure.setChangeX(this.treasure.getChangeX() + value);
+                    view.setChangeX(view.getChangeX() + value);
                     changed = true;
                 } else if (changeX > Constants.GAME_WIDTH - 300 - tileSize) {
-                    this.treasure.setChangeX(this.treasure.getChangeX() - value);
+                    view.setChangeX(view.getChangeX() - value);
                     changed = true;
                 }
                 if (changeY < 120) {
-                    this.treasure.setChangeY(this.treasure.getChangeY() + value);
+                    view.setChangeY(view.getChangeY() + value);
                     changed = true;
                 } else if (changeY > Constants.GAME_HEIGHT - 120 - tileSize) {
-                    this.treasure.setChangeY(this.treasure.getChangeY() - value);
+                    view.setChangeY(view.getChangeY() - value);
                     changed = true;
                 }
                 if (!changed) {
