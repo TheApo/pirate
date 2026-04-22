@@ -27,6 +27,7 @@
 
 package com.apogames.pirate.asset;
 
+import com.apogames.pirate.entity.NineSlice;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.Texture.TextureFilter;
@@ -94,8 +95,9 @@ public class AssetLoader {
 	private static Texture gameHudTexture;
 	public static TextureRegion gameHud;
 
-	private static Texture gameInfoTexture;
+	public static Texture gameInfoTexture;
 	public static TextureRegion gameInfo;
+	public static NineSlice hudInfoSlice;
 
 	private static Texture tilesOverlayTexture;
 	public static TextureRegion[] tilesOverlay;
@@ -287,6 +289,8 @@ public class AssetLoader {
 
 		gameInfo = new TextureRegion(gameInfoTexture, 0, 0, 283, 450);
 		gameInfo.flip(false, true);
+		// 9-slice: left/top corner 49 px, right corner 47 px, bottom 49 px; flipped Y matches gameInfo.
+		hudInfoSlice = new NineSlice(gameInfoTexture, 0, 0, 283, 450, 49, 47, 49, 49, true);
 
 		tilesOverlayTexture = new Texture(Gdx.files.internal("tiles_overlay_256_295.png"));
 		tilesOverlayTexture.setFilter(TextureFilter.Linear, TextureFilter.Nearest);

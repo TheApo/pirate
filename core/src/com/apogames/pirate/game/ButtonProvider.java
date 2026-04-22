@@ -357,6 +357,17 @@ public class ButtonProvider {
 			this.game.getButtons().add(button);
 
 			text = "";
+			function = Treasure.FUNCTION_HINTS;
+			width = 64;
+			height = 61;
+			x = 10;
+			y = Constants.GAME_HEIGHT - height - 10;
+			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.helpButton);
+			button.setFont(font);
+			button.setMouseOverTextKey(AssetLoader.gameHud, "button.hints");
+			this.game.getButtons().add(button);
+
+			text = "";
 			function = Menu.FUNCTION_TUTORIAL;
 			width = 64;
 			height = 61;

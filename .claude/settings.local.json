@@ -35,7 +35,8 @@
       "Bash(javap -cp \"/c/Users/dirk.aporius/.gradle/caches/modules-2/files-2.1/org.teavm/teavm-jso-apis/0.13.1/4ba2e03d62d0029b669876b4f5aafe4e184998fe/teavm-jso-apis-0.13.1.jar\" -public org.teavm.jso.browser.Window)",
       "Bash(\"/c/Program Files/Java/jdk-17/bin/javap.exe\" -cp \"/c/Users/dirk.aporius/.gradle/caches/modules-2/files-2.1/org.teavm/teavm-jso-apis/0.13.1/4ba2e03d62d0029b669876b4f5aafe4e184998fe/teavm-jso-apis-0.13.1.jar\" -public org.teavm.jso.browser.Window)",
       "Bash(\"/c/Program Files/Java/jdk-17/bin/javap.exe\" -cp \"/c/Users/dirk.aporius/.gradle/caches/modules-2/files-2.1/org.teavm/teavm-jso-apis/0.13.1/4ba2e03d62d0029b669876b4f5aafe4e184998fe/teavm-jso-apis-0.13.1.jar\" -public org.teavm.jso.browser.Navigator)",
-      "Bash(./gradlew --offline core:compileJava desktop:compileJava teavm:compileJava)"
+      "Bash(./gradlew --offline core:compileJava desktop:compileJava teavm:compileJava)",
+      "Bash(./gradlew core:compileJava)"
     ]
   }
 }
