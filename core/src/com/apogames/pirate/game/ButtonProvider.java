@@ -345,25 +345,27 @@ public class ButtonProvider {
 			button.setFont(font);
 			this.game.getButtons().add(button);
 
-			text = "";
+			text = "Log";
 			function = Treasure.FUNCTION_GAMELOG;
 			width = 64;
 			height = 61;
 			x = 10;
 			y = 10;
-			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.helpButton);
-			button.setFont(font);
+			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.emptyButton);
+			button.setFont(AssetLoader.font25);
+			button.setMouseOverFont(AssetLoader.font15);
 			button.setMouseOverTextKey(AssetLoader.gameHud, "button.gamelog");
 			this.game.getButtons().add(button);
 
-			text = "";
+			text = "H";
 			function = Treasure.FUNCTION_HINTS;
 			width = 64;
 			height = 61;
 			x = 10;
 			y = Constants.GAME_HEIGHT - height - 10;
-			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.helpButton);
-			button.setFont(font);
+			button = new ApoButtonImageWithThree(x, y, width, height, function, text, AssetLoader.emptyButton);
+			button.setFont(AssetLoader.font30);
+			button.setMouseOverFont(AssetLoader.font15);
 			button.setMouseOverTextKey(AssetLoader.gameHud, "button.hints");
 			this.game.getButtons().add(button);
 
@@ -383,8 +385,9 @@ public class ButtonProvider {
 			height = 61;
 			x = Constants.MENU_OFFSET_X + 10;
 			y = 10;
-			ApoButtonLanguageImage languageButton = new ApoButtonLanguageImage(x, y, width, height, function, AssetLoader.helpButton);
+			ApoButtonLanguageImage languageButton = new ApoButtonLanguageImage(x, y, width, height, function, AssetLoader.emptyButton);
 			languageButton.setFont(AssetLoader.font25);
+			languageButton.setMouseOverFont(AssetLoader.font15);
 			languageButton.setMouseOverTextKey(AssetLoader.gameHud, "button.language");
 			this.game.getButtons().add(languageButton);
 

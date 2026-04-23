@@ -87,6 +87,14 @@ public class Medium extends PiratePlayer {
             }
         }
 
+        // If the random search gave up after 1000 tries, coords may point at
+        // a null or marked tile — fall back to a guaranteed valid tile.
+        if (level[resultY][resultX] == null) {
+            int[] xy = findGuessableTile(level);
+            resultX = xy[0];
+            resultY = xy[1];
+        }
+
         if (possiblePlayersAsSolution.size() == 0 || this.howMedium < 7) {
             return getResultForNoPossiblePlayer(resultX, resultY, info, level);
         }
@@ -207,6 +215,12 @@ public class Medium extends PiratePlayer {
             if ((level[resultY][resultX] == null || level[resultY][resultX].hasIncorrectGuess() || rule.getSolution(level)[resultY][resultX]) && (count < 1000)) {
                 resultX = -1;
             }
+        }
+
+        if (level[resultY][resultX] == null) {
+            int[] xy = findGuessableTile(level);
+            resultX = xy[0];
+            resultY = xy[1];
         }
 
         return new Result(resultX, resultY);

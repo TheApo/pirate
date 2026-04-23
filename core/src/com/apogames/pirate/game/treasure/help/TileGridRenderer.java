@@ -74,7 +74,7 @@ public class TileGridRenderer {
             for (int x = 0; x < level[0].length; x++) {
                 Tile tile = level[y][x];
                 if (tile == null || !view.isTileOnScreen(x, y)) continue;
-                tile.renderFilled(panel, view.tileScreenX(x, y), view.tileScreenY(y), tileSize);
+                tile.renderFilled(panel, view.tileScreenX(x, y), view.tileScreenY(y), tileSize, playerCount);
             }
         }
         panel.getRenderer().end();

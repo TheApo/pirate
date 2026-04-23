@@ -26,6 +26,14 @@ public class Easy extends PiratePlayer {
             }
         }
 
+        // If the random search gave up after 1000 tries, the coords may still
+        // point at a null or already-ruled-out tile — use the shared fallback.
+        if (level[resultY][resultX] == null || level[resultY][resultX].hasIncorrectGuess()) {
+            int[] xy = findGuessableTile(level);
+            resultX = xy[0];
+            resultY = xy[1];
+        }
+
         int counterHere = 0;
         int nextPlayer = (int)(Math.random() * info.getMaxPlayer());
         while ((nextPlayer == info.getPlayer() || level[resultY][resultX].getCorrectGuesses()[nextPlayer]) && counterHere < 10) {
@@ -58,6 +66,12 @@ public class Easy extends PiratePlayer {
             if ((level[resultY][resultX] == null || level[resultY][resultX].hasIncorrectGuess() || rule.getSolution(level)[resultY][resultX]) && (count < 1000)) {
                 resultX = -1;
             }
+        }
+
+        if (level[resultY][resultX] == null) {
+            int[] xy = findGuessableTile(level);
+            resultX = xy[0];
+            resultY = xy[1];
         }
 
         return new Result(resultX, resultY);

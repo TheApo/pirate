@@ -28,6 +28,10 @@ public class ShowTimeInformation {
         return text;
     }
 
+    public boolean hasText() {
+        return text != null && text.length > 0;
+    }
+
     public void doThink(float delta) {
         if (this.time > 0) {
             this.time -= (int)(delta);

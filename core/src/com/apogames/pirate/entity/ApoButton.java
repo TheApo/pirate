@@ -1,6 +1,7 @@
 package com.apogames.pirate.entity;
 
 import com.apogames.pirate.Constants;
+import com.apogames.pirate.backend.DrawString;
 import com.apogames.pirate.backend.GameScreen;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
@@ -556,15 +557,22 @@ public class ApoButton extends ApoEntity {
      * @param color   the color
      */
     public void drawString(GameScreen screen, int changeX, int changeY, float[] color) {
-		Constants.glyphLayout.setText(font, text);
-		float h = Constants.glyphLayout.height;
-		if (( this.isBPressed() )) {
-			screen.drawString(this.text, this.getX() + changeX + this.getWidth()/2, this.getY() + changeY + this.getHeight()/2 - h/2, Constants.COLOR_RED, font, true);
-		} else if ( this.isBOver() ) {
-			screen.drawString(this.text, this.getX() + changeX + this.getWidth()/2, this.getY() + changeY + this.getHeight()/2 - h/2, Constants.COLOR_YELLOW, font, true);
-		} else {
-			screen.drawString(this.text, this.getX() + changeX + this.getWidth()/2, this.getY() + changeY + this.getHeight()/2 - h/2, color, font, true);	
+		// Use getText() so subclasses (e.g. ApoButtonLanguageImage) can override the label.
+		String label = getText();
+		float[] drawColor = color;
+		if (this.isBPressed()) {
+			drawColor = Constants.COLOR_RED;
+		} else if (this.isBOver()) {
+			drawColor = Constants.COLOR_YELLOW;
 		}
+		// Text is drawn inside an already-open sprite batch — project convention:
+		// pass bNewSpriteBatch=false so we don't re-begin a batch.
+		// bHeight=true with y = button centre gives proper vertical centring
+		// (matches the centring the language button used before the refactor).
+		screen.drawString(label,
+				this.getX() + changeX + this.getWidth() / 2f,
+				this.getY() + changeY + this.getHeight() / 2f,
+				drawColor, font, DrawString.MIDDLE, true, false);
 	}
 
     /**

@@ -206,7 +206,14 @@ public class Perfect extends PiratePlayer {
             point.x = chosen.x;
             point.y = chosen.y;
             point.z = chosen.z;
+            return point;
         }
+        // Fallback — no scored candidates (e.g. every remaining opponent's
+        // possible-rule list was filtered to 0 or 1 entries). Still pick ANY
+        // guessable tile so the caller always gets a valid target.
+        int[] xy = findGuessableTile(level);
+        point.x = xy[0];
+        point.y = xy[1];
         return point;
     }
 

@@ -332,8 +332,14 @@ public class Treasure extends SequentiallyThinkingScreenModel {
         this.level = createLevel.getLevel();
 
         this.getMainPanel().resetSize(Constants.GAME_WIDTH, Constants.GAME_HEIGHT);
-        
+
         setMenuButtonVisible(false);
+
+        // Panels must start closed — the Treasure instance is shared with the
+        // tutorial, so residual open state from a previous session would carry
+        // over and the user couldn't close it via the filtered tutorial input.
+        gameLogPanel.setOpen(false);
+        hintsPanel.setOpen(false);
 
         this.currentPlayer = 0;
         this.setStatus(Status.SET_QUESTION);
@@ -497,8 +503,11 @@ public class Treasure extends SequentiallyThinkingScreenModel {
             }
         }
 
-        if (this.currentStatus == Status.WON && !isRightButton) {
-            this.showWon = !this.showWon;
+        // The won-screen scroll is dismissed on the first click — and stays
+        // gone. The player keeps seeing the persistent "Pirate N wins" banner
+        // at the top of the screen.
+        if (this.currentStatus == Status.WON && !isRightButton && this.showWon) {
+            this.showWon = false;
             return;
         }
 
@@ -805,6 +814,10 @@ public class Treasure extends SequentiallyThinkingScreenModel {
             logLogicianSuggestionForNotMarker();
         } else if (this.currentStatus == Status.TREASURE) {
             this.information.setTimer(Constants.WAIT_TIME_LONGER, Localization.get("info.where_treasure_hidden"));
+        } else if (this.currentStatus == Status.WON) {
+            boolean humanWon = isCurrentHumanReady();
+            String key = humanWon ? "info.pirate_wins_you" : "info.pirate_wins";
+            this.information.setTimer(Constants.WAIT_TIME, Localization.format(key, this.wonPlayer));
         } else {
             this.information.setTimer(Constants.WAIT_TIME, Localization.format("task.players_turn", this.currentPlayer + 1));
             logLogicianSuggestionForGuess();
@@ -863,6 +876,7 @@ public class Treasure extends SequentiallyThinkingScreenModel {
             getMainPanel().getButtonByFunction(FUNCTION_TREASURE).setVisible(false);
             this.wonPlayer = this.currentPlayer + 1;
             this.curTask = Localization.format("task.pirate_wins", this.wonPlayer);
+            setInformationForStatus();
         }
     }
 
@@ -1102,7 +1116,10 @@ public class Treasure extends SequentiallyThinkingScreenModel {
 
 
         } else {
-            if (!this.tutorial && this.information.getTime() > 0) {
+            // Task hint at the top stays visible permanently — the time field
+            // still ticks down but no longer gates rendering, so the player
+            // can always glance at what to do next.
+            if (!this.tutorial && this.information.hasText()) {
                 this.information.render(this.getMainPanel());
             }
             if (this.moreInformation.getTime() > 0) {

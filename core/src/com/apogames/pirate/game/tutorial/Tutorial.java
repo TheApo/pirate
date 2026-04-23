@@ -7,11 +7,13 @@ import com.apogames.pirate.backend.SequentiallyThinkingScreenModel;
 import com.apogames.pirate.common.Localization;
 import com.apogames.pirate.game.MainPanel;
 import com.apogames.pirate.game.menu.Menu;
+import com.apogames.pirate.game.treasure.Tile;
 import com.apogames.pirate.game.treasure.Treasure;
 import com.apogames.pirate.game.treasure.enums.ExtraObjective;
 import com.apogames.pirate.game.treasure.enums.Status;
 import com.apogames.pirate.game.treasure.enums.TileColor;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
+import com.badlogic.gdx.graphics.glutils.ShapeRenderer;
 
 public class Tutorial extends SequentiallyThinkingScreenModel {
 
@@ -98,9 +100,15 @@ public class Tutorial extends SequentiallyThinkingScreenModel {
         }
     }
 
+    private boolean isMapInteractiveStep() {
+        return this.currentStep == TutorialStep.GAME_SHOW_NOTICE_INFO
+                || this.currentStep == TutorialStep.GAME_ASKING
+                || this.currentStep == TutorialStep.GAME_ASKING_INCORRECT;
+    }
+
     @Override
     public void mousePressed(int x, int y, boolean isRightButton) {
-        if (this.currentStep == TutorialStep.GAME_SHOW_NOTICE_INFO || this.currentStep == TutorialStep.GAME_ASKING) {
+        if (isMapInteractiveStep()) {
             this.treasure.mousePressed(x, y, isRightButton);
         }
         if (this.currentStep == TutorialStep.MENU_START) {
@@ -110,14 +118,14 @@ public class Tutorial extends SequentiallyThinkingScreenModel {
 
     @Override
     public void mouseDragged(int x, int y, boolean isRightButton) {
-        if (this.currentStep == TutorialStep.GAME_SHOW_NOTICE_INFO || this.currentStep == TutorialStep.GAME_ASKING) {
+        if (isMapInteractiveStep()) {
             this.treasure.mouseDragged(x, y, isRightButton);
         }
     }
 
     @Override
     public void mouseWheelChanged(int changed) {
-        if (this.currentStep == TutorialStep.GAME_SHOW_NOTICE_INFO || this.currentStep == TutorialStep.GAME_ASKING) {
+        if (isMapInteractiveStep()) {
             this.treasure.mouseWheelChanged(changed);
         }
     }
@@ -199,6 +207,7 @@ public class Tutorial extends SequentiallyThinkingScreenModel {
 
         if (this.currentStep == TutorialStep.GAME_OVERVIEW) {
             this.showTutorialStep(Localization.get("tutorial.step.two").split(";"));
+            drawMarkerLegend(670);
         }
 
         if (this.currentStep == TutorialStep.GAME_ASKING && this.treasure.getCurrentStatus() != Status.ASK) {
@@ -207,6 +216,7 @@ public class Tutorial extends SequentiallyThinkingScreenModel {
 
         if (this.currentStep == TutorialStep.GAME_ASKING_CORRECT) {
             this.showTutorialStep(Localization.get("tutorial.step.three_correct").split(";"));
+            drawMarkerLegend(700);
         }
 
         if (this.currentStep == TutorialStep.GAME_ASKING_INCORRECT) {
@@ -215,6 +225,7 @@ public class Tutorial extends SequentiallyThinkingScreenModel {
 
         if (this.currentStep == TutorialStep.GAME_ASKING_INCORRECT_2) {
             this.showTutorialStep(Localization.get("tutorial.step.three_incorrect_2").split(";"));
+            drawMarkerLegend(700);
         }
 
         if (this.currentStep == TutorialStep.GAME_SHOW_NOTICE) {
@@ -259,6 +270,37 @@ public class Tutorial extends SequentiallyThinkingScreenModel {
         for (int i = 0; i < tutorialSteps.length; i++) {
             this.getMainPanel().drawString(tutorialSteps[i], Constants.GAME_WIDTH/2f, 17 + i * 23, Constants.COLOR_WHITE, font, DrawString.MIDDLE, false, false);
         }
+    }
+
+    /**
+     * Draws a sample X marker + sample skull marker side by side on the tutorial
+     * scroll, each labelled so the player can match text mentions of "X" and
+     * "Totenkopf" to the actual in-game shapes. Must be called inside an open
+     * SpriteBatch; temporarily switches to the ShapeRenderer for the marker
+     * geometry and then restores the SpriteBatch.
+     */
+    private void drawMarkerLegend(int y) {
+        MainPanel panel = getMainPanel();
+        float[] sampleColor = Constants.PLAYER_COLORS[0]; // red = player 1
+        float markerR = 28f;
+        float xCenterX = Constants.GAME_WIDTH / 2f - 220;
+        float skullCenterX = Constants.GAME_WIDTH / 2f + 60;
+
+        // Shape-rendered markers (X and skull) — pause the batch, draw, resume.
+        panel.spriteBatch.end();
+        panel.getRenderer().begin(ShapeRenderer.ShapeType.Filled);
+        Tile.drawX(panel, xCenterX, y, markerR, sampleColor);
+        Tile.drawSkull(panel, skullCenterX, y, markerR, sampleColor);
+        panel.getRenderer().end();
+        panel.spriteBatch.begin();
+
+        // Labels.
+        panel.drawString("= " + Localization.get("tutorial.legend.x"),
+                xCenterX + markerR + 15, y - 6,
+                Constants.COLOR_BLACK, AssetLoader.font20, DrawString.BEGIN, false, false);
+        panel.drawString("= " + Localization.get("tutorial.legend.skull"),
+                skullCenterX + markerR + 15, y - 6,
+                Constants.COLOR_BLACK, AssetLoader.font20, DrawString.BEGIN, false, false);
     }
 
     private void showRules() {

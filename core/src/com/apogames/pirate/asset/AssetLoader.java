@@ -72,6 +72,9 @@ public class AssetLoader {
 	private static Texture tutorialButtonTexture;
 	public static TextureRegion[] tutorialButton;
 
+	private static Texture emptyButtonTexture;
+	public static TextureRegion[] emptyButton;
+
 	private static Texture playAgainButtonTexture;
 	public static TextureRegion[] playAgainButton;
 
@@ -218,6 +221,15 @@ public class AssetLoader {
 		for (int x = 0; x < tutorialButton.length; x++) {
 			tutorialButton[x] = new TextureRegion(tutorialButtonTexture, x * 562, 0, 562, 554);
 			tutorialButton[x].flip(false, true);
+		}
+
+		emptyButtonTexture = new Texture(Gdx.files.internal("pirate/button_empty.png"));
+		emptyButtonTexture.setFilter(TextureFilter.Linear, TextureFilter.Nearest);
+
+		emptyButton = new TextureRegion[3];
+		for (int x = 0; x < emptyButton.length; x++) {
+			emptyButton[x] = new TextureRegion(emptyButtonTexture, x * 562, 0, 562, 554);
+			emptyButton[x].flip(false, true);
 		}
 
 		playAgainButtonTexture = new Texture(Gdx.files.internal("pirate/button_playAgain.png"));
@@ -372,6 +384,7 @@ public class AssetLoader {
 		ruleButtonTexture.dispose();
 		treasureButtonTexture.dispose();
 		tutorialButtonTexture.dispose();
+		emptyButtonTexture.dispose();
 		playAgainButtonTexture.dispose();
 		gameTitleTexture.dispose();
 		gameInfoTexture.dispose();

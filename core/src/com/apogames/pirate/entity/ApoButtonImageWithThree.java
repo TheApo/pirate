@@ -4,6 +4,7 @@ import com.apogames.pirate.Constants;
 import com.apogames.pirate.backend.DrawString;
 import com.apogames.pirate.backend.GameScreen;
 import com.apogames.pirate.common.Localization;
+import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
 
 /**
@@ -17,6 +18,7 @@ public class ApoButtonImageWithThree extends ApoButton {
 	private String mouseOverText;
 	private String mouseOverTextKey;
 	private Object[] mouseOverTextArgs;
+	private BitmapFont mouseOverFont;
 
 	private boolean mouseOverTextBottom = false;
 
@@ -65,6 +67,19 @@ public class ApoButtonImageWithThree extends ApoButton {
 		return this.mouseOverText;
 	}
 
+	/**
+	 * Sets a dedicated font for the mouse-over tooltip — useful when the main
+	 * button label uses a larger font but the tooltip should stay small.
+	 * Defaults to the button's main font if not set.
+	 */
+	public void setMouseOverFont(BitmapFont font) {
+		this.mouseOverFont = font;
+	}
+
+	private BitmapFont effectiveMouseOverFont() {
+		return this.mouseOverFont != null ? this.mouseOverFont : this.getFont();
+	}
+
 	public void render(GameScreen screen, int changeX, int changeY, boolean needNewSpriteBatch) {
 		if (this.isVisible()) {
 			if (needNewSpriteBatch) {
@@ -72,9 +87,13 @@ public class ApoButtonImageWithThree extends ApoButton {
 				screen.spriteBatch.enableBlending();
 			}
 			renderImage(screen, changeX, changeY);
+			if (this.getText() != null && !this.getText().isEmpty()) {
+				this.drawString(screen, changeX, changeY, Constants.COLOR_WHITE);
+			}
 			String hover = resolvedMouseOverText();
 			if (hover != null && hover.length() > 0 && this.isBOver()) {
-				screen.getGlyphLayout().setText(this.getFont(), hover);
+				BitmapFont tooltipFont = effectiveMouseOverFont();
+				screen.getGlyphLayout().setText(tooltipFont, hover);
 				int width = (int)(screen.getGlyphLayout().width);
 				int height = 30;
 				int x = (int)(this.getXMiddle() + changeX - width/2 - 10);
@@ -88,7 +107,7 @@ public class ApoButtonImageWithThree extends ApoButton {
 					y = (int)(this.getY() + changeY + 3 + this.getHeight());
 				}
 				screen.spriteBatch.draw(this.mouseOverTextureRegion, x, y, width + 20, height);
-				screen.drawString(hover, x + 10 + width/2f, y, Constants.COLOR_WHITE, this.getFont(), DrawString.MIDDLE, false, false);
+				screen.drawString(hover, x + 10 + width/2f, y, Constants.COLOR_WHITE, tooltipFont, DrawString.MIDDLE, false, false);
 			}
 			if (needNewSpriteBatch) {
 				screen.spriteBatch.end();

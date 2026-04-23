@@ -192,6 +192,13 @@ public class Hard extends PiratePlayer {
                 }
             }
         }
+        if (point.x < 0) {
+            // Fallback — no scored candidate found (e.g. every remaining
+            // opponent's possible-rule list was filtered to 0 or 1 entries).
+            int[] xy = findGuessableTile(level);
+            point.x = xy[0];
+            point.y = xy[1];
+        }
         return point;
     }
 
