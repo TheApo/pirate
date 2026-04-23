@@ -649,6 +649,12 @@ public class Treasure extends SequentiallyThinkingScreenModel {
     @Override
     public void mouseButtonFunction(String function) {
         super.mouseButtonFunction(function);
+        // Any button press closes open panels — except the buttons that
+        // toggle a panel themselves (those run their own open/close logic).
+        if (!FUNCTION_GAMELOG.equals(function) && !FUNCTION_HINTS.equals(function)) {
+            gameLogPanel.setOpen(false);
+            hintsPanel.setOpen(false);
+        }
         if (showBackQuestion) {
             switch (function) {
                 case Treasure.FUNCTION_YES:
@@ -809,18 +815,59 @@ public class Treasure extends SequentiallyThinkingScreenModel {
     }
 
     private void setInformationForStatus() {
+        if (this.currentStatus == Status.WON) {
+            boolean humanWon = isCurrentHumanReady();
+            String key = humanWon ? "info.pirate_wins_you" : "info.pirate_wins";
+            this.information.setTimer(Constants.WAIT_TIME, Localization.format(key, this.wonPlayer));
+            return;
+        }
+
+        boolean aiTurn = this.players != null
+                && this.currentPlayer >= 0 && this.currentPlayer < this.players.length
+                && this.players[this.currentPlayer] != null
+                && !this.players[this.currentPlayer].isHuman();
+
+        if (aiTurn) {
+            setAiTurnBanner();
+            if (this.currentStatus == Status.SET_NOT) {
+                logLogicianSuggestionForNotMarker();
+            }
+            return;
+        }
+
         if (this.currentStatus == Status.SET_NOT) {
             this.information.setTimer(Constants.WAIT_TIME_LONGER, Localization.get("info.no_treasure_here_arr"), Localization.get("info.place_marker_hint"));
             logLogicianSuggestionForNotMarker();
         } else if (this.currentStatus == Status.TREASURE) {
             this.information.setTimer(Constants.WAIT_TIME_LONGER, Localization.get("info.where_treasure_hidden"));
-        } else if (this.currentStatus == Status.WON) {
-            boolean humanWon = isCurrentHumanReady();
-            String key = humanWon ? "info.pirate_wins_you" : "info.pirate_wins";
-            this.information.setTimer(Constants.WAIT_TIME, Localization.format(key, this.wonPlayer));
         } else {
             this.information.setTimer(Constants.WAIT_TIME, Localization.format("task.players_turn", this.currentPlayer + 1));
             logLogicianSuggestionForGuess();
+        }
+    }
+
+    /**
+     * Sets the top banner to describe what the currently-acting AI pirate is
+     * doing — asking, revealing a not-here spot, or claiming the treasure —
+     * using the tile it is targeting ({@code curPickLevelX/Y}) and, for asks,
+     * the target pirate from {@link #lastResult}.
+     */
+    private void setAiTurnBanner() {
+        int actor = this.currentPlayer + 1;
+        if (this.currentStatus == Status.SET_NOT) {
+            this.information.setTimer(Constants.WAIT_TIME_LONGER,
+                    Localization.format("info.ai.place_not", actor, this.curPickLevelX, this.curPickLevelY));
+        } else if (this.currentStatus == Status.TREASURE) {
+            this.information.setTimer(Constants.WAIT_TIME_LONGER,
+                    Localization.format("info.ai.claiming", actor, this.curPickLevelX, this.curPickLevelY));
+        } else if (this.lastResult != null && this.lastResult.getAskPlayer() >= 0
+                && this.curPickLevelX >= 0 && this.curPickLevelY >= 0) {
+            int target = this.lastResult.getAskPlayer() + 1;
+            this.information.setTimer(Constants.WAIT_TIME_LONGER,
+                    Localization.format("info.ai.asking", actor, target, this.curPickLevelX, this.curPickLevelY));
+        } else {
+            this.information.setTimer(Constants.WAIT_TIME,
+                    Localization.format("task.players_turn", actor));
         }
     }
 
@@ -883,7 +930,9 @@ public class Treasure extends SequentiallyThinkingScreenModel {
     public void mouseWheelChanged(int changed) {
         if (hintsPanel.onMouseWheel(this.lastMouseX, this.lastMouseY, changed)) return;
         if (gameLogPanel.onMouseWheel(this.lastMouseX, this.lastMouseY, changed)) return;
-        view.zoom(changed);
+        // Zoom towards the current pointer (mouse cursor on desktop, or the
+        // first-finger press position on touch — updated in mouseMoved).
+        view.zoom(changed, this.lastMouseX, this.lastMouseY);
     }
 
     @Override
@@ -949,11 +998,15 @@ public class Treasure extends SequentiallyThinkingScreenModel {
                     this.setStatus(Status.TREASURE);
                 }
                 this.scrollToTile.scrollToPosition(this.curPickLevelX, this.curPickLevelY);
+                // Refresh the top banner now that we know what the AI targets
+                // and which pirate it will ask.
+                setInformationForStatus();
             } else if (this.currentStatus == Status.SET_NOT) {
                 Result result = this.players[this.currentPlayer].placeWrongMarker(level, this.rules[this.currentPlayer], information);
                 this.curPickLevelX = result.getX();
                 this.curPickLevelY = result.getY();
                 this.scrollToTile.scrollToPosition(this.curPickLevelX, this.curPickLevelY);
+                setInformationForStatus();
             }
         } else if (this.currentStatus != Status.WON) {
             thinkBlink(delta);

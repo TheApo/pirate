@@ -1,10 +1,11 @@
 i:b:/animals.png:46696:1
 i:b:/background.png:498318:1
 i:b:/extraTiles_256_295.png:187372:1
-i:b:/i18n/pirate.properties:6817:1
-i:b:/i18n/pirate_de.properties:7669:1
-i:b:/i18n/pirate_en.properties:6817:1
+i:b:/i18n/pirate.properties:7579:1
+i:b:/i18n/pirate_de.properties:8455:1
+i:b:/i18n/pirate_en.properties:7579:1
 i:b:/mirror.png:20922:1
+i:b:/pirate/button_empty.png:260612:1
 i:b:/pirate/button_left.png:84511:1
 i:b:/pirate/button_play.png:57582:1
 i:b:/pirate/button_playAgain.png:75431:1

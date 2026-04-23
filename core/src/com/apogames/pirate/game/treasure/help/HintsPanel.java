@@ -4,6 +4,7 @@ import com.apogames.pirate.Constants;
 import com.apogames.pirate.asset.AssetLoader;
 import com.apogames.pirate.backend.DrawString;
 import com.apogames.pirate.common.Localization;
+import com.apogames.pirate.entity.ApoButtonPillSwitch;
 import com.apogames.pirate.entity.ScrollablePanel;
 import com.apogames.pirate.game.MainPanel;
 import com.apogames.pirate.game.treasure.Rule;
@@ -13,9 +14,14 @@ import com.apogames.pirate.game.treasure.ai.PiratePlayer;
 import java.util.ArrayList;
 
 /**
- * Scrollable panel that, for each opponent of the active human player,
- * lists every possible hint rule (from {@code allPossibleRules}). Rules
- * that are already ruled out by earlier yes/no answers are shown in grey.
+ * Scrollable panel that, for each opponent of the active human player, lists
+ * every possible hint rule (from {@code allPossibleRules}). Rules that are
+ * already ruled out by earlier yes/no answers are shown in grey.
+ *
+ * The header carries an {@link ApoButtonPillSwitch} — tapping the "Alle"
+ * label shows every candidate rule (greyed when excluded), tapping "moegliche"
+ * filters the list down to rules still consistent with the opponent's
+ * answers, tapping the pill toggles between them.
  *
  * Data is refreshed from the outside via {@link #rebuild(Tile[][], Rule[], PiratePlayer[], Rule[], int, int)}.
  */
@@ -26,13 +32,36 @@ public class HintsPanel extends ScrollablePanel {
     private static final int BOTTOM_PADDING = 40;
     private static final int CONTENT_TOP_PADDING = 15;
     private static final int TEXT_X_OFFSET = 40;
+    private static final int SWITCH_Y_OFFSET = 35;       // pill top, relative to panel top
+    private static final int SWITCH_RIGHT_PADDING = 30;  // from panel right edge
+    private static final int SWITCH_PILL_WIDTH  = 60;
+    private static final int SWITCH_PILL_HEIGHT = 30;
 
     private ArrayList<HintRow> rows = new ArrayList<>();
+
+    private final ApoButtonPillSwitch modeSwitch;
+
+    // Cached state so tapping the switch can rebuild rows without re-fetching
+    // game state from the outside.
+    private Tile[][] cachedLevel;
+    private Rule[]   cachedRules;
+    private PiratePlayer[] cachedPlayers;
+    private Rule[]   cachedAllPossibleRules;
+    private int      cachedCurrentPlayer;
+    private int      cachedPlayerCount;
 
     public HintsPanel(int x, int y, int width, int height) {
         super(x, y, width, height,
                 HEADER_HEIGHT, LINE_HEIGHT, BOTTOM_PADDING, CONTENT_TOP_PADDING, TEXT_X_OFFSET,
                 AssetLoader.hudInfoSlice);
+        // Widget handles its own positioning — the panel only says "anchor
+        // your right edge here, use this font and this size".
+        this.modeSwitch = ApoButtonPillSwitch.rightAnchored(
+                x + width - SWITCH_RIGHT_PADDING,
+                y + SWITCH_Y_OFFSET,
+                SWITCH_PILL_WIDTH, SWITCH_PILL_HEIGHT,
+                "hints_mode", "hint.mode.all", "hint.mode.possible",
+                AssetLoader.font25);
     }
 
     /**
@@ -43,17 +72,31 @@ public class HintsPanel extends ScrollablePanel {
      */
     public void rebuild(Tile[][] level, Rule[] rules, PiratePlayer[] players,
                         Rule[] allPossibleRules, int currentPlayer, int playerCount) {
-        rows = new ArrayList<>();
-        if (level == null || rules == null || players == null) return;
+        this.cachedLevel            = level;
+        this.cachedRules            = rules;
+        this.cachedPlayers          = players;
+        this.cachedAllPossibleRules = allPossibleRules;
+        this.cachedCurrentPlayer    = currentPlayer;
+        this.cachedPlayerCount      = playerCount;
+        rebuildInternal();
+    }
 
-        for (int i = 0; i < playerCount; i++) {
-            if (i == currentPlayer) continue;
-            if (i >= rules.length || rules[i] == null) continue;
+    /** Re-runs the row builder against the last-cached game state. Called
+     *  when the mode switch is toggled. */
+    private void rebuildInternal() {
+        rows = new ArrayList<>();
+        if (cachedLevel == null || cachedRules == null || cachedPlayers == null) return;
+
+        boolean showOnlyPossible = modeSwitch.isRightSelected();
+        for (int i = 0; i < cachedPlayerCount; i++) {
+            if (i == cachedCurrentPlayer) continue;
+            if (i >= cachedRules.length || cachedRules[i] == null) continue;
 
             rows.add(HintRow.header(i, Localization.format("hint.player_header", i + 1)));
             int n = 1;
-            for (Rule r : allPossibleRules) {
-                boolean excluded = !isPossibleForPlayer(r, level, i);
+            for (Rule r : cachedAllPossibleRules) {
+                boolean excluded = !isPossibleForPlayer(r, cachedLevel, i);
+                if (showOnlyPossible && excluded) continue;
                 rows.add(HintRow.rule(n + ".) " + r.getText(), excluded));
                 n++;
             }
@@ -79,6 +122,21 @@ public class HintsPanel extends ScrollablePanel {
         float[] color = row.excluded ? Constants.COLOR_GREY : Constants.COLOR_WHITE;
         panel.drawString(row.text, getX() + textXOffset, lineY,
                 color, AssetLoader.font20, DrawString.BEGIN, false, false);
+    }
+
+    @Override
+    public void render(MainPanel panel) {
+        super.render(panel);
+        if (!isOpen()) return;
+        modeSwitch.render(panel);
+    }
+
+    @Override
+    protected void onTap(int mx, int my) {
+        if (modeSwitch.handleClick(mx, my)) {
+            rebuildInternal();
+            scrollToTop();
+        }
     }
 
     @Override

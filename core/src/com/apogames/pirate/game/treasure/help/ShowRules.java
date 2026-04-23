@@ -36,6 +36,10 @@ public class ShowRules {
         return objectives;
     }
 
+    public ArrayList<ExtraObjective> getAnimals() {
+        return animals;
+    }
+
     public boolean isVisible() {
         return visible;
     }
@@ -74,6 +78,31 @@ public class ShowRules {
     private static boolean isAnimal(ExtraObjective objective) {
         return objective == ExtraObjective.BEARS || objective == ExtraObjective.RED_PANDA
                 || objective == ExtraObjective.WHITE_SHEEP || objective == ExtraObjective.BLACK_SHEEP;
+    }
+
+    /** Comma-separated, localised names for a list of animals. */
+    public static String joinAnimalNames(ArrayList<ExtraObjective> animals) {
+        return joinObjectiveNames(animals);
+    }
+
+    /** Comma-separated, localised names for a list of objectives. */
+    public static String joinObjectiveNames(ArrayList<ExtraObjective> list) {
+        StringBuilder s = new StringBuilder();
+        for (ExtraObjective o : list) {
+            if (s.length() > 0) s.append(", ");
+            s.append(o.localizedName());
+        }
+        return s.toString();
+    }
+
+    /** Comma-separated, localised names for a list of tile colours. */
+    public static String joinColorNames(ArrayList<TileColor> list) {
+        StringBuilder s = new StringBuilder();
+        for (TileColor c : list) {
+            if (s.length() > 0) s.append(", ");
+            s.append(c.localizedName());
+        }
+        return s.toString();
     }
 
     public void nextShow(int add) {
@@ -140,50 +169,29 @@ public class ShowRules {
         startY = 380;
         drawLines(mainPanel, Localization.get("rules.notice.habitat").split(";"), Constants.GAME_WIDTH/2f, startY, 20, AssetLoader.font20);
 
-        StringBuilder s = new StringBuilder();
-        for (ExtraObjective animal : this.animals) {
-            s.append(animal.name()).append(", ");
-        }
-        if (s.length() > 0) {
-            s = new StringBuilder(s.substring(0, s.length() - 2));
-        }
-        mainPanel.drawString(s.toString(), Constants.GAME_WIDTH/2f, startY + 50, Constants.COLOR_BLACK, AssetLoader.font15, DrawString.MIDDLE, false, false);
+        mainPanel.drawString(joinAnimalNames(this.animals), Constants.GAME_WIDTH/2f, startY + 50, Constants.COLOR_BLACK, AssetLoader.font15, DrawString.MIDDLE, false, false);
 
         int animalIdx = 0;
         for (ExtraObjective animal : this.animals) {
-            mainPanel.spriteBatch.draw(AssetLoader.animals[animal.getAssetNumber()][0], Constants.GAME_WIDTH/2f - 45 + animalIdx * 30, startY + 70, 30, 295f / 256f * 30);
+            mainPanel.spriteBatch.draw(AssetLoader.animals[animal.getAssetNumber()][0], Constants.GAME_WIDTH/2f - this.animals.size() * 20 + animalIdx * 40, startY + 70, 40, 40);
             animalIdx += 1;
         }
 
         startY = 480;
         drawLines(mainPanel, Localization.get("rules.notice.objective").split(";"), Constants.GAME_WIDTH/2f, startY, 20, AssetLoader.font20);
 
-        s = new StringBuilder();
-        for (ExtraObjective objective: this.objectives) {
-            s.append(objective.name()).append(", ");
-        }
-        if (s.length() > 0) {
-            s = new StringBuilder(s.substring(0, s.length() - 2));
-        }
-        mainPanel.drawString(s.toString(), Constants.GAME_WIDTH/2f, startY + 50, Constants.COLOR_BLACK, AssetLoader.font15, DrawString.MIDDLE, false, false);
+        mainPanel.drawString(joinObjectiveNames(this.objectives), Constants.GAME_WIDTH/2f, startY + 50, Constants.COLOR_BLACK, AssetLoader.font15, DrawString.MIDDLE, false, false);
 
         int i = 0;
         for (ExtraObjective objective: this.objectives) {
-            mainPanel.spriteBatch.draw(AssetLoader.objectives[0][objective.getAssetNumber()], Constants.GAME_WIDTH/2f - 45 + i * 30, startY + 70, 30, 295f / 256f * 30);
+            mainPanel.spriteBatch.draw(AssetLoader.objectives[0][objective.getAssetNumber()], Constants.GAME_WIDTH/2f - this.objectives.size() * 15 + i * 30, startY + 70, 30, 295f / 256f * 30);
             i += 1;
         }
 
         startY = 580;
         drawLines(mainPanel, Localization.get("rules.notice.color").split(";"), Constants.GAME_WIDTH/2f, startY, 20, AssetLoader.font20);
 
-        s = new StringBuilder();
-        for (TileColor color: this.colors) {
-            s.append(color.name()).append(", ");
-        }
-        if (s.length() > 0) {
-            s = new StringBuilder(s.substring(0, s.length() - 2));
-        }
-        mainPanel.drawString(s.toString(), Constants.GAME_WIDTH/2f, startY + 50, Constants.COLOR_BLACK, AssetLoader.font15, DrawString.MIDDLE, false, false);
+        mainPanel.drawString(joinColorNames(this.colors), Constants.GAME_WIDTH/2f, startY + 50, Constants.COLOR_BLACK, AssetLoader.font15, DrawString.MIDDLE, false, false);
 
         for (i = 0; i < this.colors.size(); i++) {
             mainPanel.spriteBatch.draw(AssetLoader.objectives[this.colors.get(i).getAssetNumber()][0], Constants.GAME_WIDTH/2f - this.colors.size() * 35 + i * 70, startY + 70, 30, 295f / 256f * 30);

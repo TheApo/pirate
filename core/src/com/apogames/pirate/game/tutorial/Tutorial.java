@@ -207,7 +207,7 @@ public class Tutorial extends SequentiallyThinkingScreenModel {
 
         if (this.currentStep == TutorialStep.GAME_OVERVIEW) {
             this.showTutorialStep(Localization.get("tutorial.step.two").split(";"));
-            drawMarkerLegend(670);
+            drawMarkerLegend(665);
         }
 
         if (this.currentStep == TutorialStep.GAME_ASKING && this.treasure.getCurrentStatus() != Status.ASK) {
@@ -216,7 +216,7 @@ public class Tutorial extends SequentiallyThinkingScreenModel {
 
         if (this.currentStep == TutorialStep.GAME_ASKING_CORRECT) {
             this.showTutorialStep(Localization.get("tutorial.step.three_correct").split(";"));
-            drawMarkerLegend(700);
+            drawMarkerLegend(665);
         }
 
         if (this.currentStep == TutorialStep.GAME_ASKING_INCORRECT) {
@@ -225,7 +225,7 @@ public class Tutorial extends SequentiallyThinkingScreenModel {
 
         if (this.currentStep == TutorialStep.GAME_ASKING_INCORRECT_2) {
             this.showTutorialStep(Localization.get("tutorial.step.three_incorrect_2").split(";"));
-            drawMarkerLegend(700);
+            drawMarkerLegend(665);
         }
 
         if (this.currentStep == TutorialStep.GAME_SHOW_NOTICE) {
@@ -273,34 +273,45 @@ public class Tutorial extends SequentiallyThinkingScreenModel {
     }
 
     /**
-     * Draws a sample X marker + sample skull marker side by side on the tutorial
-     * scroll, each labelled so the player can match text mentions of "X" and
-     * "Totenkopf" to the actual in-game shapes. Must be called inside an open
-     * SpriteBatch; temporarily switches to the ShapeRenderer for the marker
-     * geometry and then restores the SpriteBatch.
+     * Draws the two sample markers side by side on the tutorial scroll. Each
+     * column is a fixed-width cell: marker on the left, its label to the right.
+     * The label strings are multi-line (separated by {@code ";"} in the i18n
+     * values) so long texts wrap inside the cell width instead of running over
+     * into the neighbouring column.
+     *
+     * Must be called inside an open SpriteBatch; the method briefly closes the
+     * batch to run a ShapeRenderer pass for the marker geometry, then restores
+     * the SpriteBatch.
      */
     private void drawMarkerLegend(int y) {
         MainPanel panel = getMainPanel();
         float[] sampleColor = Constants.PLAYER_COLORS[0]; // red = player 1
-        float markerR = 28f;
-        float xCenterX = Constants.GAME_WIDTH / 2f - 220;
-        float skullCenterX = Constants.GAME_WIDTH / 2f + 60;
+        float markerR = 26f;
+        float leftCellCx  = Constants.GAME_WIDTH / 2f - 260;
+        float rightCellCx = Constants.GAME_WIDTH / 2f + 60;
 
-        // Shape-rendered markers (X and skull) — pause the batch, draw, resume.
+        // Shape-rendered markers — pause the batch, draw, resume.
         panel.spriteBatch.end();
         panel.getRenderer().begin(ShapeRenderer.ShapeType.Filled);
-        Tile.drawX(panel, xCenterX, y, markerR, sampleColor);
-        Tile.drawSkull(panel, skullCenterX, y, markerR, sampleColor);
+        Tile.drawX(panel,     leftCellCx,  y, markerR, sampleColor);
+        Tile.drawSkull(panel, rightCellCx, y, markerR, sampleColor);
         panel.getRenderer().end();
         panel.spriteBatch.begin();
 
-        // Labels.
-        panel.drawString("= " + Localization.get("tutorial.legend.x"),
-                xCenterX + markerR + 15, y - 6,
-                Constants.COLOR_BLACK, AssetLoader.font20, DrawString.BEGIN, false, false);
-        panel.drawString("= " + Localization.get("tutorial.legend.skull"),
-                skullCenterX + markerR + 15, y - 6,
-                Constants.COLOR_BLACK, AssetLoader.font20, DrawString.BEGIN, false, false);
+        drawWrappedLabel(panel, Localization.get("tutorial.legend.x"),     leftCellCx  + markerR + 15, y - 10);
+        drawWrappedLabel(panel, Localization.get("tutorial.legend.skull"), rightCellCx + markerR + 15, y - 10);
+    }
+
+    /** Renders a {@code ";"}-separated label as multiple lines, vertically
+     *  centred on {@code centreY}. */
+    private void drawWrappedLabel(MainPanel panel, String text, float x, float centreY) {
+        String[] lines = text.split(";");
+        float lineHeight = 24f;
+        float top = centreY - (lines.length - 1) * lineHeight / 2f;
+        for (int i = 0; i < lines.length; i++) {
+            panel.drawString(lines[i], x, top + i * lineHeight - 8,
+                    Constants.COLOR_BLACK, AssetLoader.font20, DrawString.BEGIN, false, false);
+        }
     }
 
     private void showRules() {
@@ -326,50 +337,46 @@ public class Tutorial extends SequentiallyThinkingScreenModel {
             this.getMainPanel().spriteBatch.draw(AssetLoader.tiles[i], Constants.GAME_WIDTH/2f - 75 + i * 30, startY + 76, 30, 295f / 256f * 30);
         }
 
+        // Habitat: dynamic list of animal names + animal sprites actually in
+        // the current level (was hardcoded "BEAR oder REDPANDA" with coin icons).
         startY = 380;
+        java.util.ArrayList<ExtraObjective> levelAnimals = this.treasure.getShowRules().getAnimals();
         this.getMainPanel().drawString(rules[6], Constants.GAME_WIDTH/2f, startY, Constants.COLOR_BLACK, AssetLoader.font25, DrawString.MIDDLE, false, false);
         this.getMainPanel().drawString(rules[7], Constants.GAME_WIDTH/2f, startY + 20, Constants.COLOR_BLACK, AssetLoader.font25, DrawString.MIDDLE, false, false);
-        this.getMainPanel().drawString(rules[8], Constants.GAME_WIDTH/2f, startY + 50, Constants.COLOR_BLACK, AssetLoader.font20, DrawString.MIDDLE, false, false);
-        for (int i = 0; i < 2; i++) {
-            this.getMainPanel().spriteBatch.draw(AssetLoader.objectives[5][i + 2], Constants.GAME_WIDTH/2f - 70 + i * 105, startY + 76, 35, 295f / 256f * 35);
+        this.getMainPanel().drawString(com.apogames.pirate.game.treasure.help.ShowRules.joinAnimalNames(levelAnimals),
+                Constants.GAME_WIDTH/2f, startY + 50, Constants.COLOR_BLACK, AssetLoader.font20, DrawString.MIDDLE, false, false);
+        for (int i = 0; i < levelAnimals.size(); i++) {
+            ExtraObjective animal = levelAnimals.get(i);
+            float cellW = 50f;
+            float firstX = Constants.GAME_WIDTH/2f - (levelAnimals.size() - 1) * cellW / 2f - cellW / 2f;
+            this.getMainPanel().spriteBatch.draw(AssetLoader.animals[animal.getAssetNumber()][0],
+                    firstX + i * cellW, startY + 76, cellW, cellW * 5f / 6f);
         }
 
         startY = 480;
+        java.util.ArrayList<ExtraObjective> levelObjectives = this.treasure.getShowRules().getObjectives();
         this.getMainPanel().drawString(rules[9], Constants.GAME_WIDTH/2f, startY, Constants.COLOR_BLACK, AssetLoader.font25, DrawString.MIDDLE, false, false);
         this.getMainPanel().drawString(rules[10], Constants.GAME_WIDTH/2f, startY + 20, Constants.COLOR_BLACK, AssetLoader.font25, DrawString.MIDDLE, false, false);
+        this.getMainPanel().drawString(com.apogames.pirate.game.treasure.help.ShowRules.joinObjectiveNames(levelObjectives),
+                Constants.GAME_WIDTH/2f, startY + 50, Constants.COLOR_BLACK, AssetLoader.font20, DrawString.MIDDLE, false, false);
 
-        StringBuilder s = new StringBuilder();
-        for (ExtraObjective objective : this.treasure.getShowRules().getObjectives()) {
-            s.append(objective.name()).append(", ");
-        }
-        if (s.length() > 0) {
-            s = new StringBuilder(s.substring(0, s.length() - 2));
-        }
-        this.getMainPanel().drawString(s.toString(), Constants.GAME_WIDTH/2f, startY + 50, Constants.COLOR_BLACK, AssetLoader.font20, DrawString.MIDDLE, false, false);
-
-        int idx = 0;
-        for (ExtraObjective objective : this.treasure.getShowRules().getObjectives()) {
-            this.getMainPanel().spriteBatch.draw(AssetLoader.objectives[0][objective.getAssetNumber()], Constants.GAME_WIDTH/2f - 45 + idx * 30, startY + 76, 30, 295f / 256f * 30);
-            idx += 1;
+        for (int i = 0; i < levelObjectives.size(); i++) {
+            ExtraObjective objective = levelObjectives.get(i);
+            this.getMainPanel().spriteBatch.draw(AssetLoader.objectives[0][objective.getAssetNumber()],
+                    Constants.GAME_WIDTH/2f - levelObjectives.size() * 15 + i * 30, startY + 76, 30, 295f / 256f * 30);
         }
 
         startY = 580;
+        java.util.ArrayList<TileColor> levelColors = this.treasure.getShowRules().getColors();
         this.getMainPanel().drawString(rules[11], Constants.GAME_WIDTH/2f, startY, Constants.COLOR_BLACK, AssetLoader.font25, DrawString.MIDDLE, false, false);
         this.getMainPanel().drawString(rules[12], Constants.GAME_WIDTH/2f, startY + 20, Constants.COLOR_BLACK, AssetLoader.font25, DrawString.MIDDLE, false, false);
+        this.getMainPanel().drawString(com.apogames.pirate.game.treasure.help.ShowRules.joinColorNames(levelColors),
+                Constants.GAME_WIDTH/2f, startY + 50, Constants.COLOR_BLACK, AssetLoader.font20, DrawString.MIDDLE, false, false);
 
-        s = new StringBuilder();
-        for (TileColor color : this.treasure.getShowRules().getColors()) {
-            s.append(color.name()).append(", ");
-        }
-        if (s.length() > 0) {
-            s = new StringBuilder(s.substring(0, s.length() - 2));
-        }
-        this.getMainPanel().drawString(s.toString(), Constants.GAME_WIDTH/2f, startY + 50, Constants.COLOR_BLACK, AssetLoader.font20, DrawString.MIDDLE, false, false);
-
-        for (int i = 0; i < this.treasure.getShowRules().getColors().size(); i++) {
-            TileColor color = this.treasure.getShowRules().getColors().get(i);
-            this.getMainPanel().spriteBatch.draw(AssetLoader.objectives[color.getAssetNumber()][0], Constants.GAME_WIDTH/2f - this.treasure.getShowRules().getColors().size() * 35 + i * 70, startY + 76, 30, 295f / 256f * 30);
-            this.getMainPanel().spriteBatch.draw(AssetLoader.objectives[color.getAssetNumber()][1], Constants.GAME_WIDTH/2f - this.treasure.getShowRules().getColors().size() * 35 + 30 + i * 70, startY + 76, 30, 295f / 256f * 30);
+        for (int i = 0; i < levelColors.size(); i++) {
+            TileColor color = levelColors.get(i);
+            this.getMainPanel().spriteBatch.draw(AssetLoader.objectives[color.getAssetNumber()][0], Constants.GAME_WIDTH/2f - levelColors.size() * 35 + i * 70, startY + 76, 30, 295f / 256f * 30);
+            this.getMainPanel().spriteBatch.draw(AssetLoader.objectives[color.getAssetNumber()][1], Constants.GAME_WIDTH/2f - levelColors.size() * 35 + 30 + i * 70, startY + 76, 30, 295f / 256f * 30);
         }
 
         startY = 710;

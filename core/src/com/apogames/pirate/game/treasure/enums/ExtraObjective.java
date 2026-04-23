@@ -1,5 +1,7 @@
 package com.apogames.pirate.game.treasure.enums;
 
+import com.apogames.pirate.common.Localization;
+
 public enum ExtraObjective {
 
     COIN(2),
@@ -19,6 +21,16 @@ public enum ExtraObjective {
 
     public int getAssetNumber() {
         return assetNumber;
+    }
+
+    public boolean isAnimal() {
+        return this == BEARS || this == RED_PANDA || this == WHITE_SHEEP || this == BLACK_SHEEP;
+    }
+
+    /** Human-readable, localised name for UI ("Baer" / "Bear" / …). */
+    public String localizedName() {
+        String prefix = isAnimal() ? "animal." : "objective.";
+        return Localization.get(prefix + name().toLowerCase());
     }
 
     public static ExtraObjective getRandomObjective() {

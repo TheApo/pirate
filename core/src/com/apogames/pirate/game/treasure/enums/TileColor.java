@@ -1,5 +1,7 @@
 package com.apogames.pirate.game.treasure.enums;
 
+import com.apogames.pirate.common.Localization;
+
 public enum TileColor {
 
     GREEN(0),
@@ -17,5 +19,10 @@ public enum TileColor {
 
     public int getAssetNumber() {
         return assetNumber;
+    }
+
+    /** Human-readable, localised colour name for UI ("gruen" / "green" / …). */
+    public String localizedName() {
+        return Localization.get("tilecolor." + name().toLowerCase());
     }
 }

@@ -86,18 +86,24 @@ public class LevelView {
     }
 
     /**
-     * Applies a zoom step (positive = zoom in, negative = zoom out) and
-     * scales the pan offset proportionally so the existing view anchor stays
-     * stable relative to the origin.
+     * Applies a zoom step (positive = zoom in, negative = zoom out), keeping
+     * the world point currently under {@code (anchorX, anchorY)} at the same
+     * screen position afterwards — so the player is "zooming into" the point
+     * they're pointing at (mouse cursor on desktop, first-finger press
+     * position on touch).
      */
-    public void zoom(int steps) {
+    public void zoom(int steps, int anchorX, int anchorY) {
         float oldSize = Constants.TILE_SIZE[curTileSize];
         curTileSize -= steps;
         if (curTileSize < 0) curTileSize = 0;
         else if (curTileSize >= Constants.TILE_SIZE.length) curTileSize = Constants.TILE_SIZE.length - 1;
-        float dif = Constants.TILE_SIZE[curTileSize] / oldSize;
-        changeX *= dif;
-        changeY *= dif;
+        float newSize = Constants.TILE_SIZE[curTileSize];
+        if (newSize == oldSize) return; // clamped — no change to pan either
+        float k = newSize / oldSize;
+        // Solve: anchor_new_screen_pos = anchor_old_screen_pos  =>
+        //   changeX_new + (anchor - changeX_old) * k = anchor
+        changeX = Math.round(anchorX - (anchorX - changeX) * k);
+        changeY = Math.round(anchorY - (anchorY - changeY) * k);
     }
 
     /**
