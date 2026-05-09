@@ -13,6 +13,13 @@ public enum TileColor {
 
     private final int assetNumber;
 
+    /**
+     * Colours that may appear on objective tiles. Excludes {@link #GREEN} —
+     * too close to the grass/forest backgrounds, hard to spot — and
+     * {@link #BLACK}, which is reserved for animals.
+     */
+    public static final TileColor[] OBJECT_COLORS = { WHITE, YELLOW, RED, BLUE };
+
     TileColor(final int assetNumber) {
         this.assetNumber = assetNumber;
     }

@@ -132,6 +132,19 @@ public class Treasure extends SequentiallyThinkingScreenModel {
 
     private boolean showBackQuestion = false;
 
+    /** Hover dwell before auto-scroll, in ms (think-loop delta is in ms). */
+    private static final float LOG_HOVER_SCROLL_DELAY_MS = 250f;
+    private int lastLogHoverIndex = -1;
+    private int lastLogSelectedIndex = -1;
+    private float logHoverTime = 0f;
+
+    /**
+     * Saved {@code showHelp} value while the human is forced into SET_NOT and
+     * we auto-enable the own-hint overlay. {@code null} when no override is
+     * active. Restored on the next status transition out of SET_NOT.
+     */
+    private Boolean prevShowHelp = null;
+
     public Treasure(final MainPanel game) {
         super(game);
     }
@@ -400,6 +413,9 @@ public class Treasure extends SequentiallyThinkingScreenModel {
         this.newRules();
         this.setInformationForStatus();
         view.center(this.level);
+        // Restore HUD: a previous win hid RULES/TREASURE and showed PLAY_AGAIN.
+        setNeededButtonsVisible();
+        updateHintsButtonVisibility();
     }
 
     private void nextPlayer(int add) {
@@ -487,11 +503,21 @@ public class Treasure extends SequentiallyThinkingScreenModel {
             return;
         }
 
-        // Click outside the hints panel (and not on its button) closes it.
-        if (hintsPanel.isOpen() && !curDragged && !isRightButton
-                && !hintsPanel.isInside(mouseX, mouseY) && !hintsButtonRegion.intersects(mouseX, mouseY)) {
-            hintsPanel.setOpen(false);
-            return;
+        // Click outside an open panel (and not on its toggle button) closes it.
+        if (!curDragged && !isRightButton) {
+            if (hintsPanel.isOpen()
+                    && !hintsPanel.isInside(mouseX, mouseY)
+                    && !hintsButtonRegion.intersects(mouseX, mouseY)) {
+                hintsPanel.setOpen(false);
+                return;
+            }
+            ApoButton logBtn = getMainPanel().getButtonByFunction(FUNCTION_GAMELOG);
+            if (gameLogPanel.isOpen()
+                    && !gameLogPanel.isInside(mouseX, mouseY)
+                    && (logBtn == null || !logBtn.intersects(mouseX, mouseY))) {
+                gameLogPanel.setOpen(false);
+                return;
+            }
         }
 
         // Short tap on the map clears any pinned log-entry highlight.
@@ -903,8 +929,10 @@ public class Treasure extends SequentiallyThinkingScreenModel {
     }
 
     private void setStatus(Status status) {
+        Status prev = this.currentStatus;
         this.noActionTime = 0;
         this.currentStatus = status;
+        applyAutoShowHelp(prev, status);
         getMainPanel().getButtonByFunction(FUNCTION_TREASURE).setVisible(true);
         showAskButtons(false);
         updateHintsButtonVisibility();
@@ -924,6 +952,26 @@ public class Treasure extends SequentiallyThinkingScreenModel {
             this.wonPlayer = this.currentPlayer + 1;
             this.curTask = Localization.format("task.pirate_wins", this.wonPlayer);
             setInformationForStatus();
+        }
+    }
+
+    /**
+     * Auto-enables the own-hint overlay while the human is forced to place a
+     * NOT-marker (SET_NOT) and restores the previous value on transition out.
+     * Caller passes the previous and new {@link Status}; we only act on the
+     * actual SET_NOT boundary so repeated identical setStatus calls are no-ops.
+     */
+    private void applyAutoShowHelp(Status prev, Status next) {
+        boolean enteringSetNot = next == Status.SET_NOT && prev != Status.SET_NOT;
+        boolean leavingSetNot = prev == Status.SET_NOT && next != Status.SET_NOT;
+        if (enteringSetNot
+                && players != null && currentPlayer >= 0 && currentPlayer < players.length
+                && players[currentPlayer] != null && players[currentPlayer].isHuman()) {
+            this.prevShowHelp = tileGridRenderer.isShowHelp();
+            tileGridRenderer.setShowHelp(true);
+        } else if (leavingSetNot && this.prevShowHelp != null) {
+            tileGridRenderer.setShowHelp(this.prevShowHelp);
+            this.prevShowHelp = null;
         }
     }
 
@@ -964,9 +1012,10 @@ public class Treasure extends SequentiallyThinkingScreenModel {
         if (this.information.getTime() > 0) {
             this.information.doThink(delta);
         }
+        handleLogScrollTriggers(delta);
         if (this.scrollToTile.getGoalX() >= 0) {
             this.scrollToTile.doThink(delta);
-            if (this.currentStatus != Status.WON && !this.players[this.currentPlayer].isHuman() && this.scrollToTile.getGoalX() < 0) {
+            if (this.currentStatus != Status.WON && !this.players[this.currentPlayer].isHuman() && this.scrollToTile.getGoalX() < 0 && this.scrollToTile.isCursorEnabled()) {
                 if (this.currentStatus == Status.SET_QUESTION) {
 //                    GridPoint2 point = getPositionForPlayer(this.lastResult.getAskPlayer());
 //                    this.scrollToTile.moveMouseToPosition(point.x, point.y);
@@ -1218,6 +1267,61 @@ public class Treasure extends SequentiallyThinkingScreenModel {
         int idx = gameLogPanel.getHighlightEntryIndex();
         if (idx < 0 || idx >= gameLogPanel.entries().size()) return null;
         return gameLogPanel.entries().get(idx);
+    }
+
+    /**
+     * Watches the GameLog hover/selection state and asks {@link ScrollToTile}
+     * to bring the referenced tile into view if it sits behind the panel or
+     * outside the visible map area. A click triggers immediately, hover only
+     * after {@link #LOG_HOVER_SCROLL_DELAY} so brief mouse passes don't pan
+     * the map.
+     */
+    private void handleLogScrollTriggers(float delta) {
+        if (!gameLogPanel.isOpen()) {
+            lastLogHoverIndex = -1;
+            lastLogSelectedIndex = -1;
+            logHoverTime = 0f;
+            return;
+        }
+        int sel = gameLogPanel.getSelectedIndex();
+        if (sel != lastLogSelectedIndex) {
+            lastLogSelectedIndex = sel;
+            if (sel >= 0) {
+                triggerLogScrollIfNeeded(sel);
+            }
+        }
+        int hov = gameLogPanel.getHoveredIndex();
+        if (hov != lastLogHoverIndex) {
+            lastLogHoverIndex = hov;
+            logHoverTime = 0f;
+        } else if (hov >= 0 && logHoverTime >= 0f) {
+            logHoverTime += delta;
+            if (logHoverTime >= LOG_HOVER_SCROLL_DELAY_MS) {
+                triggerLogScrollIfNeeded(hov);
+                logHoverTime = -1f;
+            }
+        }
+    }
+
+    /** Triggers a panel-aware scroll if the entry's tile isn't fully visible. */
+    private void triggerLogScrollIfNeeded(int entryIdx) {
+        if (entryIdx < 0 || entryIdx >= gameLogPanel.entries().size()) return;
+        if (this.scrollToTile.getGoalX() >= 0) return;
+        GameLogEntry e = gameLogPanel.entries().get(entryIdx);
+        int tx = e.getTileX(), ty = e.getTileY();
+        if (tx < 0 || ty < 0) return;
+        int sx = view.tileScreenX(tx, ty);
+        int sy = view.tileScreenY(ty);
+        int ts = view.tileSize();
+        int panelRight = gameLogPanel.isOpen() ? (int)(gameLogPanel.getX() + gameLogPanel.getWidth()) : 0;
+        int leftBound = Math.max(10, panelRight + 10);
+        int rightBound = Constants.GAME_WIDTH - 300 - ts;
+        int topBound = 120;
+        int bottomBound = Constants.GAME_HEIGHT - 120 - ts;
+        boolean obstructed = sx < leftBound || sx > rightBound || sy < topBound || sy > bottomBound;
+        if (!obstructed) return;
+        int extraLeft = panelRight > 0 ? panelRight : 0;
+        this.scrollToTile.scrollOnly(tx, ty, extraLeft);
     }
 
     private void renderLogHighlightOutline() {

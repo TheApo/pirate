@@ -51,10 +51,10 @@ public class RightHudRenderer {
                 }
                 panel.spriteBatch.draw(AssetLoader.arrow,
                         Constants.GAME_WIDTH - w - 10 - 43, slotY, ARROW_SIZE, ARROW_SIZE);
-                panel.drawString(name, Constants.GAME_WIDTH - w + 104, slotY - 1,
+                panel.drawString(name, Constants.GAME_WIDTH - w + 104, slotY + 5 - 1,
                         Constants.PLAYER_COLORS[i], AssetLoader.font25, DrawString.BEGIN, false, false);
             }
-            panel.drawString(name, Constants.GAME_WIDTH - w + 103, slotY,
+            panel.drawString(name, Constants.GAME_WIDTH - w + 103, slotY + 5,
                     Constants.COLOR_WHITE, AssetLoader.font25, DrawString.BEGIN, false, false);
         }
     }

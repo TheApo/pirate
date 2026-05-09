@@ -39,9 +39,9 @@ public class RuleCreate {
             HashSet<ExtraObjective> allObjectives = getAllObjectives(level);
             ArrayList<ExtraObjective> objectives = new ArrayList<>(allObjectives);
 
-            int color = (int)(Math.random() * 3);
+            TileColor color = TileColor.OBJECT_COLORS[(int)(Math.random() * TileColor.OBJECT_COLORS.length)];
 
-            rule = new Rule(objectives.get((int)(Math.random() * objectives.size())), TileColor.values()[color], 2, not);
+            rule = new Rule(objectives.get((int)(Math.random() * objectives.size())), color, 2, not);
         } else if (random < 80) {
             HashSet<TileColor> colorSet = getAllColors(level);
             ArrayList<TileColor> colors = new ArrayList<>(colorSet);

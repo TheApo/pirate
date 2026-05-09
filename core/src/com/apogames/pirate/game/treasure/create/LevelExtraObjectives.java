@@ -7,6 +7,7 @@ import com.apogames.pirate.game.treasure.enums.TileColor;
 import com.badlogic.gdx.math.Vector2;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 
 public class LevelExtraObjectives {
@@ -29,10 +30,7 @@ public class LevelExtraObjectives {
             extras.remove((int)(Math.random() * extras.size()));
         }
 
-        ArrayList<Integer> colors = new ArrayList<>();
-        for (int i = 0; i < 5; i++) {
-            colors.add(i);
-        }
+        ArrayList<TileColor> colors = new ArrayList<>(Arrays.asList(TileColor.OBJECT_COLORS));
         colors.remove((int)(Math.random() * colors.size()));
         if (!hard) {
             colors.remove((int) (Math.random() * colors.size()));
@@ -47,7 +45,7 @@ public class LevelExtraObjectives {
                     y = (int)(Math.random() * this.level.length);
                 }
 
-                this.level[y][x].setObjective(ExtraObjective.values()[extras.get(extra)], TileColor.values()[colors.get(color)]);
+                this.level[y][x].setObjective(ExtraObjective.values()[extras.get(extra)], colors.get(color));
             }
         }
 

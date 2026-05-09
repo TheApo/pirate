@@ -88,7 +88,7 @@ public class ApoButtonImageWithThree extends ApoButton {
 			}
 			renderImage(screen, changeX, changeY);
 			if (this.getText() != null && !this.getText().isEmpty()) {
-				this.drawString(screen, changeX, changeY, Constants.COLOR_WHITE);
+				this.drawString(screen, changeX, changeY - 12, Constants.COLOR_WHITE);
 			}
 			String hover = resolvedMouseOverText();
 			if (hover != null && hover.length() > 0 && this.isBOver()) {
@@ -107,7 +107,7 @@ public class ApoButtonImageWithThree extends ApoButton {
 					y = (int)(this.getY() + changeY + 3 + this.getHeight());
 				}
 				screen.spriteBatch.draw(this.mouseOverTextureRegion, x, y, width + 20, height);
-				screen.drawString(hover, x + 10 + width/2f, y, Constants.COLOR_WHITE, tooltipFont, DrawString.MIDDLE, false, false);
+				screen.drawString(hover, x + 10 + width/2f, y + 2, Constants.COLOR_WHITE, tooltipFont, DrawString.MIDDLE, false, false);
 			}
 			if (needNewSpriteBatch) {
 				screen.spriteBatch.end();

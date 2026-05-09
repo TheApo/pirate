@@ -344,7 +344,7 @@ public class GameScreen implements Screen, InputProcessor {
         
         glyphLayout.setText(font, s);
         if (bHeight) {
-            font.draw(spriteBatch, s, x - glyphLayout.width * width.getDifference(), y - glyphLayout.height * 7 / 10f);
+            font.draw(spriteBatch, s, x - glyphLayout.width * width.getDifference(), y - font.getCapHeight() / 2f);
         } else {
             font.draw(spriteBatch, s, x - glyphLayout.width * width.getDifference(), y);
         }

@@ -37,7 +37,7 @@ public class Tile {
             this.objective = ExtraObjective.getRandomObjective();
             TileColor currentColor = TileColor.BLACK;
             if (!isAnimal(this.objective)) {
-                currentColor = TileColor.values()[(int)(Math.random() * (TileColor.values().length - 1))];
+                currentColor = TileColor.OBJECT_COLORS[(int)(Math.random() * TileColor.OBJECT_COLORS.length)];
             }
             this.color = currentColor;
         } else {

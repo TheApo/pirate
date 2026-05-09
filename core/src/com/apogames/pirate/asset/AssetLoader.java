@@ -33,11 +33,31 @@ import com.badlogic.gdx.graphics.Texture;
 import com.badlogic.gdx.graphics.Texture.TextureFilter;
 import com.badlogic.gdx.graphics.g2d.BitmapFont;
 import com.badlogic.gdx.graphics.g2d.TextureRegion;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
+import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator.FreeTypeFontParameter;
 
 /**
  * The type Asset loader.
  */
 public class AssetLoader {
+
+	/**
+	 * Empirical vertical shift to make TTF (FreeType) glyphs sit at the same
+	 * visual y-anchor as the legacy Hiero {@code .fnt} files we replaced.
+	 * Hiero packed glyphs with extra top padding ({@code padding=1,1,1,1})
+	 * and an offset baseline; FreeType packs them tight, so without this
+	 * shift the entire UI text reads ~⅕ font-size too high. Apply once per
+	 * generated font in {@link #generateFont(FreeTypeFontGenerator, int)}.
+	 */
+	private static final float LEGACY_FNT_Y_SHIFT_FACTOR = 0.40f;
+
+	private static final String FONT_CHARACTERS = FreeTypeFontGenerator.DEFAULT_CHARS
+			+ "ÄÖÜäöüß"
+			+ "ÀÁÂÃÅÆÇÈÉÊËÌÍÎÏ"
+			+ "ÐÑÒÓÔÕ×ØÙÚÛÝÞ"
+			+ "àáâãåæçèéêëìíîï"
+			+ "ðñòóôõ÷øùúûýþÿ"
+			+ "–—‘’“”„…€";
 
 	private static Texture backgroundTexture;
 	public static TextureRegion backgroundTextureRegion;
@@ -365,11 +385,38 @@ public class AssetLoader {
 			animals[3][mirrored].flip(false, true);
 		}
 
-		font40 = new BitmapFont(Gdx.files.internal("pirate/fonts/pirate40.fnt"), Gdx.files.internal("pirate/fonts/pirate40.png"), true);
-		font20 = new BitmapFont(Gdx.files.internal("pirate/fonts/pirate20.fnt"), Gdx.files.internal("pirate/fonts/pirate20.png"), true);
-		font15 = new BitmapFont(Gdx.files.internal("pirate/fonts/pirate15.fnt"), Gdx.files.internal("pirate/fonts/pirate15.png"), true);
-		font25 = new BitmapFont(Gdx.files.internal("pirate/fonts/pirate25.fnt"), Gdx.files.internal("pirate/fonts/pirate25.png"), true);
-		font30 = new BitmapFont(Gdx.files.internal("pirate/fonts/pirate30.fnt"), Gdx.files.internal("pirate/fonts/pirate30.png"), true);
+		FreeTypeFontGenerator generator = new FreeTypeFontGenerator(Gdx.files.internal("pirate/fonts/OpenSans.ttf"));
+		font15 = generateFont(generator, 15);
+		font20 = generateFont(generator, 20);
+		font25 = generateFont(generator, 25);
+		font30 = generateFont(generator, 30);
+		font40 = generateFont(generator, 40);
+		generator.dispose();
+	}
+
+	private static BitmapFont generateFont(FreeTypeFontGenerator generator, int size) {
+		FreeTypeFontParameter param = new FreeTypeFontParameter();
+		param.size = size;
+		param.flip = true;
+		param.characters = FONT_CHARACTERS;
+		param.hinting = FreeTypeFontGenerator.Hinting.Full;
+		param.minFilter = TextureFilter.Linear;
+		param.magFilter = TextureFilter.Linear;
+		param.genMipMaps = true;
+		BitmapFont font = generator.generateFont(param);
+		shiftGlyphsDown(font, Math.round(size * LEGACY_FNT_Y_SHIFT_FACTOR));
+		return font;
+	}
+
+	/** Shifts every glyph's yoffset by {@code dy} so the whole font sits lower. */
+	private static void shiftGlyphsDown(BitmapFont font, int dy) {
+		if (dy == 0) return;
+		for (BitmapFont.Glyph[] page : font.getData().glyphs) {
+			if (page == null) continue;
+			for (BitmapFont.Glyph g : page) {
+				if (g != null) g.yoffset += dy;
+			}
+		}
 	}
 
 	public static void dispose() {

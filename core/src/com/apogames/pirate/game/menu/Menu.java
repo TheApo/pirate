@@ -263,15 +263,20 @@ public class Menu extends SequentiallyThinkingScreenModel {
 		this.getMainPanel().drawString(s, Constants.GAME_WIDTH / 2f, 65, Constants.COLOR_BLACK, AssetLoader.font30, DrawString.MIDDLE, false, false);
 
 		s = Localization.get("menu.player");
-		this.getMainPanel().drawString(s, Constants.GAME_WIDTH / 2f + 5, 238, Constants.COLOR_WHITE, AssetLoader.font25, DrawString.MIDDLE, false, false);
+		this.getMainPanel().drawString(s, Constants.GAME_WIDTH / 2f + 5, 242, Constants.COLOR_WHITE, AssetLoader.font25, DrawString.MIDDLE, false, false);
 
 		for (int i = 0; i < this.players.size(); i++) {
+			float[] color = Constants.COLOR_WHITE;
 			if (this.players.get(i) != null) {
 				s = this.players.get(i).getName();
+				if (i < Constants.PLAYER_COLORS.length) {
+					color = Constants.PLAYER_COLORS[i];
+				}
 			} else {
 				s = Localization.get("menu.player_empty");
 			}
-			this.getMainPanel().drawString(s, Constants.MENU_OFFSET_X + Constants.MENU_WIDTH * (0.1f + i * 0.2f), 275, Constants.COLOR_WHITE, AssetLoader.font20, DrawString.MIDDLE, false, false);
+			this.getMainPanel().drawString(s, Constants.MENU_OFFSET_X + Constants.MENU_WIDTH * (0.1f + i * 0.2f) + 1, 279, color, AssetLoader.font20, DrawString.MIDDLE, false, false);
+			this.getMainPanel().drawString(s, Constants.MENU_OFFSET_X + Constants.MENU_WIDTH * (0.1f + i * 0.2f), 278, Constants.COLOR_WHITE, AssetLoader.font20, DrawString.MIDDLE, false, false);
 		}
 
 		s = Localization.get("menu.difficulty");
